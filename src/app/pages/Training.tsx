@@ -19,7 +19,25 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   LogOut,
+  Calendar,
+  Check,
+  Plus,
+  Eye,
+  User,
+  Mail,
+  Phone,
+  Globe,
+  MessageSquare,
+  Camera,
+  BookOpen,
+  ArrowLeft,
+  Pencil,
+  Trash2,
+  UserX,
+  RotateCcw,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import logo from "figma:asset/c717e59cf8f32fe25477e30d5de63135f3057cc8.png";
@@ -48,6 +66,9 @@ type HighlightTarget =
   | "reports-participant"
   | "reports-preview"
   | "reports-export"
+  | "attendance-today"
+  | "attendance-selection"
+  | "attendance-list"
   | "participant-personal"
   | "participant-address"
   | "participant-emergency"
@@ -56,7 +77,22 @@ type HighlightTarget =
   | "participant-children-programs"
   | "participant-fitness-programs"
   | "participant-general-programs"
-  | "participant-program-details";
+  | "participant-program-details"
+  | "add-program-search"
+  | "add-program-list"
+  | "add-program-details"
+  | "search-search"
+  | "search-active-list"
+  | "search-inactive-list"
+  | "search-profile-general"
+  | "search-profile-program-specific"
+  | "search-profile-enrolled-programs"
+  | "search-profile-active-buttons"
+  | "search-profile-inactive-buttons"
+  | "programs-add-modal"
+  | "programs-categories"
+  | "programs-edit-delete"
+  | "programs-manage-staff";
 
 interface TrainingStep {
   stepNumber: number | string;
@@ -71,6 +107,14 @@ interface TrainingStep {
     width?: string;
     height?: string;
   };
+}
+
+interface OverlayRect {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  borderRadius?: number;
 }
 
 const dashboardCardMocks = [
@@ -183,6 +227,20 @@ export default function Training() {
   const reportsExportRef = useRef<HTMLDivElement | null>(null);
   const [reportsHighlightStyle, setReportsHighlightStyle] =
     useState<CSSProperties | null>(null);
+  const attendanceCanvasRef = useRef<HTMLDivElement | null>(
+    null,
+  );
+  const attendanceTodayRef = useRef<HTMLDivElement | null>(
+    null,
+  );
+  const attendanceSelectionRef = useRef<HTMLDivElement | null>(
+    null,
+  );
+  const attendanceListRef = useRef<HTMLDivElement | null>(null);
+  const [
+    attendanceHighlightStyle,
+    setAttendanceHighlightStyle,
+  ] = useState<CSSProperties | null>(null);
   const addParticipantCanvasRef = useRef<HTMLDivElement | null>(
     null,
   );
@@ -209,6 +267,75 @@ export default function Training() {
     addParticipantHighlightStyle,
     setAddParticipantHighlightStyle,
   ] = useState<CSSProperties | null>(null);
+  const addToProgramCanvasRef = useRef<HTMLDivElement | null>(
+    null,
+  );
+  const addToProgramSearchRef = useRef<HTMLDivElement | null>(
+    null,
+  );
+  const addToProgramListRef = useRef<HTMLDivElement | null>(
+    null,
+  );
+  const addToProgramDetailsRef = useRef<HTMLDivElement | null>(
+    null,
+  );
+  const [
+    addToProgramHighlightStyle,
+    setAddToProgramHighlightStyle,
+  ] = useState<CSSProperties | null>(null);
+  const searchTrainingCanvasRef = useRef<HTMLDivElement | null>(
+    null,
+  );
+  const searchSearchRef = useRef<HTMLDivElement | null>(null);
+  const searchActiveListRef = useRef<HTMLDivElement | null>(
+    null,
+  );
+  const searchInactiveListRef = useRef<HTMLDivElement | null>(
+    null,
+  );
+  const searchProfileGeneralRef = useRef<HTMLDivElement | null>(
+    null,
+  );
+  const searchProfileProgramSpecificRef =
+    useRef<HTMLDivElement | null>(null);
+  const searchProfileEnrolledProgramsRef =
+    useRef<HTMLDivElement | null>(null);
+  const searchProfileActiveButtonsRef =
+    useRef<HTMLDivElement | null>(null);
+  const searchProfileInactiveButtonsRef =
+    useRef<HTMLDivElement | null>(null);
+  const [
+    searchTrainingHighlightStyle,
+    setSearchTrainingHighlightStyle,
+  ] = useState<CSSProperties | null>(null);
+  const programsCanvasRef = useRef<HTMLDivElement | null>(null);
+  const programsAddModalRef = useRef<HTMLDivElement | null>(
+    null,
+  );
+  const programsAddButtonRef = useRef<HTMLButtonElement | null>(
+    null,
+  );
+  const programsChildrenTitleRef =
+    useRef<HTMLDivElement | null>(null);
+  const programsFitnessTitleRef = useRef<HTMLDivElement | null>(
+    null,
+  );
+  const programsGeneralTitleRef = useRef<HTMLDivElement | null>(
+    null,
+  );
+  const programsCategoriesRef = useRef<HTMLDivElement | null>(
+    null,
+  );
+  const programsEditDeleteRef = useRef<HTMLDivElement | null>(
+    null,
+  );
+  const programsManageStaffRef = useRef<HTMLDivElement | null>(
+    null,
+  );
+  const [programsHighlightStyle, setProgramsHighlightStyle] =
+    useState<CSSProperties | null>(null);
+  const [programsOverlayRects, setProgramsOverlayRects] =
+    useState<OverlayRect[]>([]);
 
   const trainingModules: TrainingModule[] = [
     {
@@ -261,31 +388,24 @@ export default function Training() {
       steps: [
         {
           stepNumber: 1,
-          title: "Select the program",
+          title: "Today's Date",
           description:
-            "Use the program dropdown to choose which program session you want to mark attendance for.",
-          highlightTarget: "filters",
+            "At the top of the page, staff can quickly confirm today's date before recording attendance.",
+          highlightTarget: "attendance-today",
         },
         {
           stepNumber: 2,
-          title: "Select the date",
+          title: "Select Program and Date",
           description:
-            "Choose the date of the program session. The system will load participants enrolled in that program.",
-          highlightTarget: "filters",
+            "Choose the program scheduled for today, then confirm or adjust the attendance date before continuing.",
+          highlightTarget: "attendance-selection",
         },
         {
           stepNumber: 3,
-          title: "Mark each participant",
+          title: "Tick participants and save attendance",
           description:
-            "For each participant, click Present or Absent to record their attendance status.",
-          highlightTarget: "page-content",
-        },
-        {
-          stepNumber: 4,
-          title: "Save attendance records",
-          description:
-            "Click the Save Attendance button to submit all attendance records for this session.",
-          highlightTarget: "button",
+            "Tick each participant who attended, review the attendance summary, then click Save Attendance to submit the record.",
+          highlightTarget: "attendance-list",
         },
       ],
     },
@@ -374,31 +494,24 @@ export default function Training() {
       steps: [
         {
           stepNumber: 1,
-          title: "Search for the participant",
+          title: "Search for a participant",
           description:
-            "Use the search bar to find the participant you want to enroll. You can search by name, email, or phone number.",
-          highlightTarget: "filters",
+            "Use the search box to look up participants by name, email, or phone number before choosing who to add.",
+          highlightTarget: "add-program-search",
         },
         {
           stepNumber: 2,
-          title: "Select the participant",
+          title: "Review the participant list",
           description:
-            "Click on the participant from the search results to select them for program enrollment.",
-          highlightTarget: "page-content",
+            "The participant list shows matching results. Click Select on the right side of a row to choose that participant and continue.",
+          highlightTarget: "add-program-list",
         },
         {
           stepNumber: 3,
-          title: "Choose the program",
+          title: "Select Program and add the participant",
           description:
-            "Select which program you want to enroll the participant in from the available programs list.",
-          highlightTarget: "form",
-        },
-        {
-          stepNumber: 4,
-          title: "Confirm enrollment",
-          description:
-            "Review the enrollment details and click Enroll to add the participant to the selected program.",
-          highlightTarget: "button",
+            "After clicking Select, the chosen participant's basic information appears above. Then choose a program from Select Program and click Add to Program.",
+          highlightTarget: "add-program-details",
         },
       ],
     },
@@ -411,32 +524,61 @@ export default function Training() {
       route: "/search",
       steps: [
         {
-          stepNumber: 1,
-          title: "Enter search criteria",
+          stepNumber: "1.1",
+          title: "Search for participants",
           description:
-            "Type the participant's name, email, or phone number in the search field to find their record.",
-          highlightTarget: "filters",
+            "Use the search box to find participants by name, email, or phone number.",
+          highlightTarget: "search-search",
         },
         {
-          stepNumber: 2,
-          title: "View search results",
+          stepNumber: "1.2",
+          title: "Review Active Participants",
           description:
-            "Browse through the list of matching participants. Results show name, contact info, and enrollment status.",
-          highlightTarget: "page-content",
+            "Active Participants appear first. Each row shows the participant's basic information and includes a View Profile button for more detail.",
+          highlightTarget: "search-active-list",
         },
         {
-          stepNumber: 3,
-          title: "Open participant profile",
+          stepNumber: "1.3",
+          title: "Expand Inactive Participants",
           description:
-            "Click on a participant to view their full profile including personal details, program enrollments, and attendance history.",
-          highlightTarget: "page-content",
+            "Use the Inactive Participants section to manually expand and review participants who are not currently enrolled. These rows also include a View Profile button.",
+          highlightTarget: "search-inactive-list",
         },
         {
-          stepNumber: 4,
-          title: "Edit participant information",
+          stepNumber: "2.1",
+          title: "Profile - General Info",
           description:
-            "From the profile page, you can click Edit to update participant information if needed.",
-          highlightTarget: "button",
+            "The participant profile shows key information collected in Add New Participant Step 1, including Contact Information, Personal Information, Emergency Contact, Cultural Background, Communication Preferences, and Photo Consent.",
+          highlightTarget: "search-profile-general",
+        },
+        {
+          stepNumber: "2.2",
+          title:
+            "Profile - Program-Specific Registration Information",
+          description:
+            "Below the general profile details, the page shows any program-specific registration information that was collected in Add New Participant Step 3.",
+          highlightTarget: "search-profile-program-specific",
+        },
+        {
+          stepNumber: "2.3",
+          title: "Profile - Enrolled Programs",
+          description:
+            "The Enrolled Programs section lists the participant's current programs and basic enrolment details.",
+          highlightTarget: "search-profile-enrolled-programs",
+        },
+        {
+          stepNumber: "2.4",
+          title: "Active profile actions",
+          description:
+            "For an active participant, staff can go Back to Search, Edit Details, Delete, Add to Program, or make the profile inactive.",
+          highlightTarget: "search-profile-active-buttons",
+        },
+        {
+          stepNumber: "2.5",
+          title: "Inactive profile actions",
+          description:
+            "For an inactive participant, staff can go Back to Search, Edit Details, Delete, or reactivate the profile by adding the participant back to a program.",
+          highlightTarget: "search-profile-inactive-buttons",
         },
       ],
     },
@@ -495,31 +637,31 @@ export default function Training() {
       steps: [
         {
           stepNumber: 1,
-          title: "View all programs",
+          title: "Add a new program",
           description:
-            "See the complete list of programs including their schedule, capacity, and enrollment numbers.",
-          highlightTarget: "page-content",
+            "Click Add Program to open the Add New Program form. Enter the required details such as program name, recurrence, days, start date, time, and capacity, then click Add Program to create it.",
+          highlightTarget: "programs-add-modal",
         },
         {
           stepNumber: 2,
-          title: "Edit program details",
+          title: "Programs are grouped by category",
           description:
-            "Click on a program to edit its name, description, schedule, capacity, or other settings.",
-          highlightTarget: "page-content",
+            "Programs are displayed in three sections: Children's Programs, Fitness & Wellbeing Programs, and General Programs, making it easier to browse the program list.",
+          highlightTarget: "programs-categories",
         },
         {
           stepNumber: 3,
-          title: "Assign staff to programs",
+          title: "Edit or delete a program",
           description:
-            "Manage which staff members are assigned to facilitate each program.",
-          highlightTarget: "form",
+            "Each program card includes Edit and Delete buttons so staff can update program details or remove a program when needed.",
+          highlightTarget: "programs-edit-delete",
         },
         {
           stepNumber: 4,
-          title: "Create new programs",
+          title: "Manage staff for each program",
           description:
-            "Use the Add New Program button to create additional programs for participants to join.",
-          highlightTarget: "button",
+            "Use Manage Staff on a program card to choose which staff members are assigned to that program and confirm the selection.",
+          highlightTarget: "programs-manage-staff",
         },
       ],
     },
@@ -567,13 +709,85 @@ export default function Training() {
     if (!activeModule) {
       setBasicsHighlightStyle(null);
       setReportsHighlightStyle(null);
+      setAttendanceHighlightStyle(null);
       setAddParticipantHighlightStyle(null);
+      setAddToProgramHighlightStyle(null);
+      setSearchTrainingHighlightStyle(null);
+      setProgramsHighlightStyle(null);
+      setProgramsOverlayRects([]);
       return;
     }
 
     const updateHighlight = () => {
       const target =
         activeModule.steps[currentStep]?.highlightTarget;
+
+      if (activeModule.id === "programs") {
+        const canvas = programsCanvasRef.current;
+        if (!canvas || !target) return;
+
+        const canvasRect = canvas.getBoundingClientRect();
+
+        const buildRect = (
+          element: HTMLElement | null,
+          padding: number,
+          borderRadius: number,
+        ): OverlayRect | null => {
+          if (!element) return null;
+          const rect = element.getBoundingClientRect();
+          return {
+            top: rect.top - canvasRect.top - padding,
+            left: rect.left - canvasRect.left - padding,
+            width: rect.width + padding * 2,
+            height: rect.height + padding * 2,
+            borderRadius,
+          };
+        };
+
+        let rects: OverlayRect[] = [];
+
+        if (target === "programs-add-modal") {
+          rects = [
+            buildRect(programsAddButtonRef.current, 8, 22),
+            buildRect(programsAddModalRef.current, 10, 26),
+          ].filter(Boolean) as OverlayRect[];
+        } else if (target === "programs-categories") {
+          rects = [
+            buildRect(programsChildrenTitleRef.current, 8, 22),
+            buildRect(programsFitnessTitleRef.current, 8, 22),
+            buildRect(programsGeneralTitleRef.current, 8, 22),
+          ].filter(Boolean) as OverlayRect[];
+        } else if (target === "programs-edit-delete") {
+          rects = [
+            buildRect(programsEditDeleteRef.current, 8, 20),
+          ].filter(Boolean) as OverlayRect[];
+        } else if (target === "programs-manage-staff") {
+          rects = [
+            buildRect(programsManageStaffRef.current, 10, 26),
+          ].filter(Boolean) as OverlayRect[];
+        }
+
+        setProgramsOverlayRects(rects);
+
+        const primaryRect = rects[0];
+        if (primaryRect) {
+          setProgramsHighlightStyle({
+            position: "absolute",
+            top: `${primaryRect.top}px`,
+            left: `${primaryRect.left}px`,
+            width: `${primaryRect.width}px`,
+            height: `${primaryRect.height}px`,
+            border: "4px solid #3B82F6",
+            borderRadius: `${primaryRect.borderRadius ?? 22}px`,
+            boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+            zIndex: 20,
+            pointerEvents: "none",
+          });
+        } else {
+          setProgramsHighlightStyle(null);
+        }
+        return;
+      }
 
       if (activeModule.id === "basics") {
         const paddingByTarget: Partial<
@@ -658,6 +872,49 @@ export default function Training() {
         return;
       }
 
+      if (activeModule.id === "attendance") {
+        const paddingByTarget: Partial<
+          Record<HighlightTarget, number>
+        > = {
+          "attendance-today": 8,
+          "attendance-selection": 8,
+          "attendance-list": 10,
+        };
+
+        const getTargetElement = () => {
+          if (target === "attendance-today")
+            return attendanceTodayRef.current;
+          if (target === "attendance-selection")
+            return attendanceSelectionRef.current;
+          if (target === "attendance-list")
+            return attendanceListRef.current;
+          return null;
+        };
+
+        const canvas = attendanceCanvasRef.current;
+        const targetEl = getTargetElement();
+        if (!canvas || !targetEl || !target) return;
+
+        const canvasRect = canvas.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
+        const padding = paddingByTarget[target] ?? 8;
+
+        setAttendanceHighlightStyle({
+          position: "absolute",
+          top: `${targetRect.top - canvasRect.top - padding}px`,
+          left: `${targetRect.left - canvasRect.left - padding}px`,
+          width: `${targetRect.width + padding * 2}px`,
+          height: `${targetRect.height + padding * 2}px`,
+          border: "4px solid #3B82F6",
+          borderRadius:
+            target === "attendance-list" ? "24px" : "20px",
+          boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+          zIndex: 20,
+          pointerEvents: "none",
+        });
+        return;
+      }
+
       if (activeModule.id === "add-participant") {
         const paddingByTarget: Partial<
           Record<HighlightTarget, number>
@@ -721,9 +978,117 @@ export default function Training() {
         return;
       }
 
+      if (activeModule.id === "add-to-program") {
+        const paddingByTarget: Partial<
+          Record<HighlightTarget, number>
+        > = {
+          "add-program-search": 8,
+          "add-program-list": 10,
+          "add-program-details": 10,
+        };
+
+        const getTargetElement = () => {
+          if (target === "add-program-search")
+            return addToProgramSearchRef.current;
+          if (target === "add-program-list")
+            return addToProgramListRef.current;
+          if (target === "add-program-details")
+            return addToProgramDetailsRef.current;
+          return null;
+        };
+
+        const canvas = addToProgramCanvasRef.current;
+        const targetEl = getTargetElement();
+        if (!canvas || !targetEl || !target) return;
+
+        const canvasRect = canvas.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
+        const padding = paddingByTarget[target] ?? 8;
+
+        setAddToProgramHighlightStyle({
+          position: "absolute",
+          top: `${targetRect.top - canvasRect.top - padding}px`,
+          left: `${targetRect.left - canvasRect.left - padding}px`,
+          width: `${targetRect.width + padding * 2}px`,
+          height: `${targetRect.height + padding * 2}px`,
+          border: "4px solid #3B82F6",
+          borderRadius:
+            target === "add-program-list" ? "24px" : "20px",
+          boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+          zIndex: 20,
+          pointerEvents: "none",
+        });
+        return;
+      }
+
+      if (activeModule.id === "search") {
+        const paddingByTarget: Partial<
+          Record<HighlightTarget, number>
+        > = {
+          "search-search": 8,
+          "search-active-list": 10,
+          "search-inactive-list": 10,
+          "search-profile-general": 8,
+          "search-profile-program-specific": 8,
+          "search-profile-enrolled-programs": 8,
+          "search-profile-active-buttons": 8,
+          "search-profile-inactive-buttons": 8,
+        };
+
+        const getTargetElement = () => {
+          if (target === "search-search")
+            return searchSearchRef.current;
+          if (target === "search-active-list")
+            return searchActiveListRef.current;
+          if (target === "search-inactive-list")
+            return searchInactiveListRef.current;
+          if (target === "search-profile-general")
+            return searchProfileGeneralRef.current;
+          if (target === "search-profile-program-specific")
+            return searchProfileProgramSpecificRef.current;
+          if (target === "search-profile-enrolled-programs")
+            return searchProfileEnrolledProgramsRef.current;
+          if (target === "search-profile-active-buttons")
+            return searchProfileActiveButtonsRef.current;
+          if (target === "search-profile-inactive-buttons")
+            return searchProfileInactiveButtonsRef.current;
+          return null;
+        };
+
+        const canvas = searchTrainingCanvasRef.current;
+        const targetEl = getTargetElement();
+        if (!canvas || !targetEl || !target) return;
+
+        const canvasRect = canvas.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
+        const padding = paddingByTarget[target] ?? 8;
+
+        setSearchTrainingHighlightStyle({
+          position: "absolute",
+          top: `${targetRect.top - canvasRect.top - padding}px`,
+          left: `${targetRect.left - canvasRect.left - padding}px`,
+          width: `${targetRect.width + padding * 2}px`,
+          height: `${targetRect.height + padding * 2}px`,
+          border: "4px solid #3B82F6",
+          borderRadius:
+            target === "search-active-list" ||
+            target === "search-inactive-list"
+              ? "24px"
+              : "20px",
+          boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+          zIndex: 20,
+          pointerEvents: "none",
+        });
+        return;
+      }
+
       setBasicsHighlightStyle(null);
       setReportsHighlightStyle(null);
+      setAttendanceHighlightStyle(null);
       setAddParticipantHighlightStyle(null);
+      setAddToProgramHighlightStyle(null);
+      setSearchTrainingHighlightStyle(null);
+      setProgramsHighlightStyle(null);
     };
 
     updateHighlight();
@@ -836,6 +1201,221 @@ export default function Training() {
     target: HighlightTarget,
     moduleId?: string,
   ): CSSProperties => {
+    if (moduleId === "add-to-program") {
+      if (addToProgramHighlightStyle) {
+        return addToProgramHighlightStyle;
+      }
+
+      return {
+        position: "absolute",
+        top: "260px",
+        left: "90px",
+        width: "860px",
+        height: "120px",
+        border: "4px solid #3B82F6",
+        borderRadius: "22px",
+        boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+        zIndex: 20,
+        pointerEvents: "none",
+      };
+    }
+
+    if (moduleId === "search") {
+      if (searchTrainingHighlightStyle) {
+        return searchTrainingHighlightStyle;
+      }
+
+      const searchFallbacks: Partial<
+        Record<HighlightTarget, CSSProperties>
+      > = {
+        "search-search": {
+          position: "absolute",
+          top: "500px",
+          left: "110px",
+          width: "1310px",
+          height: "110px",
+          border: "4px solid #3B82F6",
+          borderRadius: "20px",
+          boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+          zIndex: 20,
+          pointerEvents: "none",
+        },
+        "search-active-list": {
+          position: "absolute",
+          top: "660px",
+          left: "110px",
+          width: "1310px",
+          height: "520px",
+          border: "4px solid #3B82F6",
+          borderRadius: "24px",
+          boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+          zIndex: 20,
+          pointerEvents: "none",
+        },
+        "search-inactive-list": {
+          position: "absolute",
+          top: "1220px",
+          left: "110px",
+          width: "1310px",
+          height: "260px",
+          border: "4px solid #3B82F6",
+          borderRadius: "24px",
+          boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+          zIndex: 20,
+          pointerEvents: "none",
+        },
+        "search-profile-general": {
+          position: "absolute",
+          top: "300px",
+          left: "80px",
+          width: "1540px",
+          height: "760px",
+          border: "4px solid #3B82F6",
+          borderRadius: "24px",
+          boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+          zIndex: 20,
+          pointerEvents: "none",
+        },
+        "search-profile-program-specific": {
+          position: "absolute",
+          top: "1110px",
+          left: "80px",
+          width: "1540px",
+          height: "280px",
+          border: "4px solid #3B82F6",
+          borderRadius: "24px",
+          boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+          zIndex: 20,
+          pointerEvents: "none",
+        },
+        "search-profile-enrolled-programs": {
+          position: "absolute",
+          top: "1435px",
+          left: "80px",
+          width: "1540px",
+          height: "380px",
+          border: "4px solid #3B82F6",
+          borderRadius: "24px",
+          boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+          zIndex: 20,
+          pointerEvents: "none",
+        },
+        "search-profile-active-buttons": {
+          position: "absolute",
+          top: "1860px",
+          left: "80px",
+          width: "1540px",
+          height: "110px",
+          border: "4px solid #3B82F6",
+          borderRadius: "20px",
+          boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+          zIndex: 20,
+          pointerEvents: "none",
+        },
+        "search-profile-inactive-buttons": {
+          position: "absolute",
+          top: "1785px",
+          left: "80px",
+          width: "1540px",
+          height: "110px",
+          border: "4px solid #3B82F6",
+          borderRadius: "20px",
+          boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+          zIndex: 20,
+          pointerEvents: "none",
+        },
+      };
+
+      return (
+        searchFallbacks[target] || {
+          position: "absolute",
+          top: "300px",
+          left: "80px",
+          width: "900px",
+          height: "180px",
+          border: "4px solid #3B82F6",
+          borderRadius: "20px",
+          boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+          zIndex: 20,
+          pointerEvents: "none",
+        }
+      );
+    }
+
+    if (moduleId === "programs") {
+      if (programsHighlightStyle) {
+        return programsHighlightStyle;
+      }
+
+      const programsFallbacks: Partial<
+        Record<HighlightTarget, CSSProperties>
+      > = {
+        "programs-add-modal": {
+          position: "absolute",
+          top: "220px",
+          left: "430px",
+          width: "840px",
+          height: "980px",
+          border: "4px solid #3B82F6",
+          borderRadius: "24px",
+          boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+          zIndex: 20,
+          pointerEvents: "none",
+        },
+        "programs-categories": {
+          position: "absolute",
+          top: "370px",
+          left: "70px",
+          width: "1460px",
+          height: "1280px",
+          border: "4px solid #3B82F6",
+          borderRadius: "26px",
+          boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+          zIndex: 20,
+          pointerEvents: "none",
+        },
+        "programs-edit-delete": {
+          position: "absolute",
+          top: "640px",
+          left: "430px",
+          width: "190px",
+          height: "64px",
+          border: "4px solid #3B82F6",
+          borderRadius: "20px",
+          boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+          zIndex: 20,
+          pointerEvents: "none",
+        },
+        "programs-manage-staff": {
+          position: "absolute",
+          top: "320px",
+          left: "470px",
+          width: "760px",
+          height: "760px",
+          border: "4px solid #3B82F6",
+          borderRadius: "24px",
+          boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+          zIndex: 20,
+          pointerEvents: "none",
+        },
+      };
+
+      return (
+        programsFallbacks[target] || {
+          position: "absolute",
+          top: "220px",
+          left: "430px",
+          width: "840px",
+          height: "980px",
+          border: "4px solid #3B82F6",
+          borderRadius: "24px",
+          boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+          zIndex: 20,
+          pointerEvents: "none",
+        }
+      );
+    }
+
     if (moduleId === "basics") {
       if (basicsHighlightStyle) {
         return basicsHighlightStyle;
@@ -874,6 +1454,25 @@ export default function Training() {
       };
     }
 
+    if (moduleId === "attendance") {
+      if (attendanceHighlightStyle) {
+        return attendanceHighlightStyle;
+      }
+
+      return {
+        position: "absolute",
+        top: "250px",
+        left: "90px",
+        width: "920px",
+        height: "190px",
+        border: "4px solid #3B82F6",
+        borderRadius: "22px",
+        boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+        zIndex: 20,
+        pointerEvents: "none",
+      };
+    }
+
     if (moduleId === "add-participant") {
       if (addParticipantHighlightStyle) {
         return addParticipantHighlightStyle;
@@ -885,6 +1484,25 @@ export default function Training() {
         left: "90px",
         width: "860px",
         height: "260px",
+        border: "4px solid #3B82F6",
+        borderRadius: "22px",
+        boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
+        zIndex: 20,
+        pointerEvents: "none",
+      };
+    }
+
+    if (moduleId === "add-to-program") {
+      if (addToProgramHighlightStyle) {
+        return addToProgramHighlightStyle;
+      }
+
+      return {
+        position: "absolute",
+        top: "260px",
+        left: "90px",
+        width: "860px",
+        height: "120px",
         border: "4px solid #3B82F6",
         borderRadius: "22px",
         boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.58)",
@@ -1037,6 +1655,39 @@ export default function Training() {
         boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.55)",
         zIndex: 20,
       },
+      "attendance-today": {
+        position: "absolute",
+        top: "260px",
+        left: "90px",
+        width: "920px",
+        height: "150px",
+        border: "4px solid #3B82F6",
+        borderRadius: "18px",
+        boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.55)",
+        zIndex: 20,
+      },
+      "attendance-selection": {
+        position: "absolute",
+        top: "450px",
+        left: "90px",
+        width: "920px",
+        height: "290px",
+        border: "4px solid #3B82F6",
+        borderRadius: "18px",
+        boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.55)",
+        zIndex: 20,
+      },
+      "attendance-list": {
+        position: "absolute",
+        top: "780px",
+        left: "90px",
+        width: "920px",
+        height: "700px",
+        border: "4px solid #3B82F6",
+        borderRadius: "22px",
+        boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.55)",
+        zIndex: 20,
+      },
       "participant-personal": {
         position: "absolute",
         top: "240px",
@@ -1131,6 +1782,39 @@ export default function Training() {
         left: "80px",
         width: "940px",
         height: "980px",
+        border: "4px solid #3B82F6",
+        borderRadius: "22px",
+        boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.55)",
+        zIndex: 20,
+      },
+      "add-program-search": {
+        position: "absolute",
+        top: "310px",
+        left: "80px",
+        width: "980px",
+        height: "100px",
+        border: "4px solid #3B82F6",
+        borderRadius: "18px",
+        boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.55)",
+        zIndex: 20,
+      },
+      "add-program-list": {
+        position: "absolute",
+        top: "760px",
+        left: "80px",
+        width: "1540px",
+        height: "500px",
+        border: "4px solid #3B82F6",
+        borderRadius: "22px",
+        boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.55)",
+        zIndex: 20,
+      },
+      "add-program-details": {
+        position: "absolute",
+        top: "450px",
+        left: "80px",
+        width: "1540px",
+        height: "260px",
         border: "4px solid #3B82F6",
         borderRadius: "22px",
         boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.55)",
@@ -1597,6 +2281,52 @@ export default function Training() {
       }
     }
 
+    if (moduleId === "attendance") {
+      const configs: Partial<
+        Record<
+          HighlightTarget,
+          {
+            width: number;
+            height: number;
+            preferredSides: Array<
+              "right" | "left" | "below" | "above"
+            >;
+          }
+        >
+      > = {
+        "attendance-today": {
+          width: 620,
+          height: 220,
+          preferredSides: ["right", "below", "left", "above"],
+        },
+        "attendance-selection": {
+          width: 660,
+          height: 220,
+          preferredSides: ["right", "below", "left", "above"],
+        },
+        "attendance-list": {
+          width: 660,
+          height: 240,
+          preferredSides: ["right", "above", "left", "below"],
+        },
+      };
+
+      const config = configs[target];
+      if (config) {
+        const smartPosition = getSmartTextboxPosition({
+          highlightStyle: attendanceHighlightStyle,
+          canvas: attendanceCanvasRef.current,
+          boxWidth: config.width,
+          boxHeight: config.height,
+          preferredSides: config.preferredSides,
+        });
+
+        if (smartPosition) {
+          return smartPosition;
+        }
+      }
+    }
+
     if (moduleId === "add-participant") {
       const configs: Partial<
         Record<
@@ -1670,6 +2400,165 @@ export default function Training() {
         if (smartPosition) {
           return smartPosition;
         }
+      }
+    }
+
+    if (moduleId === "add-to-program") {
+      const configs: Partial<
+        Record<
+          HighlightTarget,
+          {
+            width: number;
+            height: number;
+            preferredSides: Array<
+              "right" | "left" | "below" | "above"
+            >;
+          }
+        >
+      > = {
+        "add-program-search": {
+          width: 620,
+          height: 220,
+          preferredSides: ["right", "below", "left", "above"],
+        },
+        "add-program-list": {
+          width: 640,
+          height: 230,
+          preferredSides: ["above", "right", "left", "below"],
+        },
+        "add-program-details": {
+          width: 660,
+          height: 240,
+          preferredSides: ["right", "below", "left", "above"],
+        },
+      };
+
+      const config = configs[target];
+      if (config) {
+        const smartPosition = getSmartTextboxPosition({
+          highlightStyle: addToProgramHighlightStyle,
+          canvas: addToProgramCanvasRef.current,
+          boxWidth: config.width,
+          boxHeight: config.height,
+          preferredSides: config.preferredSides,
+        });
+
+        if (smartPosition) {
+          return smartPosition;
+        }
+      }
+    }
+
+    if (moduleId === "search") {
+      const configs: Partial<
+        Record<
+          HighlightTarget,
+          {
+            width: number;
+            height: number;
+            preferredSides: Array<
+              "right" | "left" | "below" | "above"
+            >;
+          }
+        >
+      > = {
+        "search-search": {
+          width: 620,
+          height: 210,
+          preferredSides: ["right", "below", "left", "above"],
+        },
+        "search-active-list": {
+          width: 660,
+          height: 230,
+          preferredSides: ["right", "above", "left", "below"],
+        },
+        "search-inactive-list": {
+          width: 660,
+          height: 230,
+          preferredSides: ["right", "above", "left", "below"],
+        },
+        "search-profile-general": {
+          width: 680,
+          height: 250,
+          preferredSides: ["right", "below", "left", "above"],
+        },
+        "search-profile-program-specific": {
+          width: 650,
+          height: 230,
+          preferredSides: ["right", "left", "above", "below"],
+        },
+        "search-profile-enrolled-programs": {
+          width: 650,
+          height: 220,
+          preferredSides: ["right", "left", "above", "below"],
+        },
+        "search-profile-active-buttons": {
+          width: 660,
+          height: 220,
+          preferredSides: ["above", "right", "left", "below"],
+        },
+        "search-profile-inactive-buttons": {
+          width: 660,
+          height: 220,
+          preferredSides: ["above", "right", "left", "below"],
+        },
+      };
+
+      const config = configs[target];
+      if (config) {
+        const smartPosition = getSmartTextboxPosition({
+          highlightStyle: searchTrainingHighlightStyle,
+          canvas: searchTrainingCanvasRef.current,
+          boxWidth: config.width,
+          boxHeight: config.height,
+          preferredSides: config.preferredSides,
+        });
+
+        if (smartPosition) {
+          return smartPosition;
+        }
+      }
+    }
+
+    if (moduleId === "programs") {
+      if (
+        target === "programs-add-modal" ||
+        target === "programs-categories" ||
+        target === "programs-manage-staff"
+      ) {
+        return {
+          position: "absolute",
+          top: "150px",
+          left: "28px",
+          width: "560px",
+          maxWidth: "calc(100vw - 80px)",
+          height: "auto",
+        };
+      }
+
+      if (target === "programs-edit-delete") {
+        const smartPosition = getSmartTextboxPosition({
+          highlightStyle: programsHighlightStyle,
+          canvas: programsCanvasRef.current,
+          boxWidth: 540,
+          boxHeight: 240,
+          preferredSides: ["right", "left", "below", "above"],
+          gap: 24,
+          padding: 24,
+        });
+
+        if (smartPosition) {
+          return smartPosition;
+        }
+
+        return {
+          position: "absolute",
+          top: "620px",
+          left: "640px",
+          width: "540px",
+          maxWidth: "calc(100vw - 80px)",
+          height: "auto",
+        };
       }
     }
 
@@ -1752,6 +2641,24 @@ export default function Training() {
         left: "520px",
         width: "620px",
       },
+      "attendance-today": {
+        position: "absolute",
+        top: "240px",
+        left: "1040px",
+        width: "620px",
+      },
+      "attendance-selection": {
+        position: "absolute",
+        top: "500px",
+        left: "1040px",
+        width: "660px",
+      },
+      "attendance-list": {
+        position: "absolute",
+        top: "880px",
+        left: "1040px",
+        width: "660px",
+      },
       "participant-personal": {
         position: "absolute",
         top: "220px",
@@ -1805,6 +2712,30 @@ export default function Training() {
         top: "300px",
         left: "1040px",
         width: "660px",
+      },
+      "programs-add-modal": {
+        position: "absolute",
+        top: "180px",
+        left: "1270px",
+        width: "620px",
+      },
+      "programs-categories": {
+        position: "absolute",
+        top: "380px",
+        left: "1270px",
+        width: "620px",
+      },
+      "programs-edit-delete": {
+        position: "absolute",
+        top: "760px",
+        left: "1270px",
+        width: "620px",
+      },
+      "programs-manage-staff": {
+        position: "absolute",
+        top: "300px",
+        left: "1270px",
+        width: "620px",
       },
     };
 
@@ -1948,6 +2879,401 @@ export default function Training() {
             </div>
           </main>
         </div>
+      </div>
+    );
+  };
+
+  const renderAttendanceMockPage = () => {
+    const fieldWrap = "space-y-3";
+    const fieldClass =
+      "flex h-[64px] items-center justify-between rounded-[18px] border border-gray-300 bg-white px-6 text-[17px] font-semibold text-slate-900";
+
+    const participants = [
+      {
+        name: "Olivia Martin",
+        details: "olivia.martin@example.com • 0400 111 222",
+        present: true,
+      },
+      {
+        name: "Noah Wilson",
+        details: "noah.wilson@example.com • 0400 333 444",
+        present: false,
+      },
+      {
+        name: "Charlotte Lee",
+        details: "charlotte.lee@example.com • 0400 555 666",
+        present: true,
+      },
+    ];
+
+    const todayLabel = new Date().toLocaleDateString("en-AU", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    return (
+      <div
+        ref={attendanceCanvasRef}
+        className="absolute inset-0 bg-[#edf4f8]"
+      >
+        <header className="bg-gradient-to-r from-blue-600 to-blue-700 shadow-lg">
+          <div className="flex items-center justify-between px-10 py-5">
+            <div className="flex items-center gap-6">
+              <img
+                src={logo}
+                alt="The Hut Community Centre Logo"
+                className="h-16 w-auto"
+              />
+              <h1 className="text-4xl font-bold text-white">
+                The Hut Participation Portal
+              </h1>
+            </div>
+            <button className="flex items-center gap-2 rounded-xl bg-red-600 px-6 py-4 text-2xl font-bold text-white shadow-md">
+              <LogOut size={24} />
+              Logout
+            </button>
+          </div>
+        </header>
+
+        <main className="px-10 py-10">
+          <div className="mx-auto max-w-[1080px] rounded-[32px] border border-blue-200 bg-white p-10 shadow-sm">
+            <div className="mb-8 flex items-center gap-5 rounded-2xl bg-blue-50 p-6">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-white">
+                <ClipboardCheck size={30} />
+              </div>
+              <div>
+                <h2 className="text-4xl font-bold text-slate-900">
+                  Record Attendance
+                </h2>
+                <p className="mt-1 text-lg text-slate-600">
+                  Mark attendance for participants enrolled in
+                  today's programs
+                </p>
+              </div>
+            </div>
+
+            <div
+              ref={attendanceTodayRef}
+              className="mb-8 rounded-2xl bg-gradient-to-r from-teal-500 to-teal-600 p-6 text-white shadow-lg"
+            >
+              <div className="flex items-center gap-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20">
+                  <Calendar size={30} />
+                </div>
+                <div>
+                  <div className="text-lg font-semibold opacity-90">
+                    Today's Date
+                  </div>
+                  <div className="text-3xl font-bold">
+                    {todayLabel}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              ref={attendanceSelectionRef}
+              className="mb-8 space-y-6"
+            >
+              <div className="rounded-2xl bg-gray-50 p-6">
+                <div className={fieldWrap}>
+                  <div className="text-[18px] font-bold text-slate-900">
+                    Select Program *
+                  </div>
+                  <div className={fieldClass}>
+                    <span>Walking Group • 10:00-11:00</span>
+                    <span className="text-xl">⌄</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-gray-50 p-6">
+                <div className={fieldWrap}>
+                  <div className="text-[18px] font-bold text-slate-900">
+                    Date *
+                  </div>
+                  <div className={fieldClass}>
+                    <span>2026-04-23</span>
+                    <span className="text-xl">🗓️</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div ref={attendanceListRef} className="space-y-6">
+              <div className="rounded-2xl border-2 border-blue-200 bg-blue-50 p-5">
+                <h3 className="mb-2 text-2xl font-bold text-slate-900">
+                  Walking Group
+                </h3>
+                <p className="text-lg font-semibold text-slate-700">
+                  3 Participants
+                </p>
+                <p className="mt-2 text-base text-slate-600">
+                  ✓ Check the box for each person who attended
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {participants.map((participant) => (
+                  <div
+                    key={participant.name}
+                    className="flex items-center gap-5 rounded-2xl border-4 border-gray-300 bg-white p-5 shadow-sm"
+                  >
+                    <div
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg border-2 ${
+                        participant.present
+                          ? "border-blue-600 bg-blue-600 text-white"
+                          : "border-gray-300 bg-white"
+                      }`}
+                    >
+                      {participant.present ? (
+                        <Check size={18} />
+                      ) : null}
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-xl font-bold text-slate-900">
+                        {participant.name}
+                      </div>
+                      <div className="mt-1 text-base text-slate-600">
+                        {participant.details}
+                      </div>
+                    </div>
+                    {participant.present && (
+                      <div className="rounded-full bg-green-600 px-5 py-2 text-lg font-bold text-white shadow-lg">
+                        Present ✓
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-white shadow-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-xl font-bold">
+                    Attendance Summary:
+                  </span>
+                  <span className="text-3xl font-bold">
+                    2 / 3 Present
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <button className="flex-1 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 text-xl font-bold text-white shadow-lg">
+                  Save Attendance
+                </button>
+                <button className="rounded-2xl border-4 border-gray-400 px-8 py-5 text-xl font-bold text-gray-700">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  };
+
+  const renderAddToProgramMockPage = () => {
+    const participants = [
+      {
+        name: "Emma Johnson",
+        email: "emma.johnson@example.com",
+        phone: "0400 111 222",
+        selected: false,
+      },
+      {
+        name: "Liam Brown",
+        email: "liam.brown@example.com",
+        phone: "0400 333 444",
+        selected: true,
+      },
+      {
+        name: "Sophie Taylor",
+        email: "sophie.taylor@example.com",
+        phone: "0400 555 666",
+        selected: false,
+      },
+    ];
+
+    return (
+      <div
+        ref={addToProgramCanvasRef}
+        className="absolute inset-0 bg-[#eef2f7]"
+      >
+        <header className="bg-gradient-to-r from-blue-600 to-blue-700 shadow-lg">
+          <div className="flex items-center justify-between px-10 py-5">
+            <div className="flex items-center gap-6">
+              <img
+                src={logo}
+                alt="The Hut Community Centre Logo"
+                className="h-16 w-auto"
+              />
+              <h1 className="text-4xl font-bold text-white">
+                The Hut Participation Portal
+              </h1>
+            </div>
+            <button className="flex items-center gap-2 rounded-xl bg-red-600 px-6 py-4 text-2xl font-bold text-white shadow-md">
+              <LogOut size={24} />
+              Logout
+            </button>
+          </div>
+        </header>
+
+        <main className="px-10 py-10">
+          <div className="mx-auto max-w-[1540px]">
+            <div className="mb-8 rounded-[30px] border border-purple-200 bg-white p-10 shadow-sm">
+              <div className="mb-6 flex items-center gap-5">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-600 text-white">
+                  <UserCheck size={30} />
+                </div>
+                <div>
+                  <h2 className="text-5xl font-bold text-slate-900">
+                    Add Participant to Program
+                  </h2>
+                  <p className="mt-2 text-lg text-slate-600">
+                    Search for a participant, select them, then
+                    choose a program to enrol them in.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mb-8 rounded-2xl border-2 border-blue-200 bg-blue-50 p-6">
+                <h3 className="mb-2 text-xl font-bold text-blue-900">
+                  Instructions
+                </h3>
+                <ol className="list-decimal space-y-2 pl-6 text-base text-blue-800">
+                  <li>
+                    Search for a participant using the search
+                    box below
+                  </li>
+                  <li>Click Select on a participant row</li>
+                  <li>Choose a program from the dropdown</li>
+                  <li>
+                    Click Add to Program to confirm the
+                    enrolment
+                  </li>
+                </ol>
+              </div>
+
+              <div ref={addToProgramSearchRef} className="mb-8">
+                <div className="relative">
+                  <Search
+                    className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400"
+                    size={28}
+                  />
+                  <div className="flex h-[88px] items-center rounded-[22px] border-4 border-gray-300 bg-white pl-20 pr-6 text-[24px] font-semibold text-slate-500 shadow-sm">
+                    Search by name, email, or phone...
+                  </div>
+                </div>
+              </div>
+
+              <div
+                ref={addToProgramDetailsRef}
+                className="mb-8 rounded-[28px] border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-blue-50 p-8"
+              >
+                <h3 className="mb-4 text-3xl font-bold text-slate-900">
+                  Selected Participant
+                </h3>
+                <div className="mb-6 rounded-2xl bg-white p-6 shadow-sm">
+                  <div className="text-2xl font-bold text-slate-900">
+                    Liam Brown
+                  </div>
+                  <div className="mt-2 text-lg text-slate-600">
+                    liam.brown@example.com
+                  </div>
+                  <div className="mt-1 text-lg text-slate-600">
+                    0400 333 444
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="text-xl font-bold text-slate-900">
+                    Select Program
+                  </div>
+                  <div className="flex h-[84px] items-center justify-between rounded-[20px] border-4 border-gray-300 bg-white px-6 text-[22px] font-semibold text-slate-900 shadow-sm">
+                    <span>Walking Group - Monday at 10:00</span>
+                    <span className="text-2xl">⌄</span>
+                  </div>
+
+                  <div className="mt-6 flex gap-4">
+                    <button className="flex-1 rounded-2xl bg-gradient-to-r from-purple-500 to-purple-600 px-8 py-5 text-xl font-bold text-white shadow-lg">
+                      <div className="flex items-center justify-center gap-3">
+                        <Plus size={26} />
+                        Add to Program
+                      </div>
+                    </button>
+                    <button className="rounded-2xl border-4 border-gray-300 px-8 py-5 text-xl font-bold text-gray-700">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                ref={addToProgramListRef}
+                className="overflow-hidden rounded-[28px] border-2 border-gray-200 bg-white shadow-sm"
+              >
+                <table className="w-full">
+                  <thead className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+                    <tr>
+                      <th className="px-6 py-5 text-left text-lg font-bold">
+                        Name
+                      </th>
+                      <th className="px-6 py-5 text-left text-lg font-bold">
+                        Email
+                      </th>
+                      <th className="px-6 py-5 text-left text-lg font-bold">
+                        Phone
+                      </th>
+                      <th className="px-6 py-5 text-left text-lg font-bold">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {participants.map((participant, index) => (
+                      <tr
+                        key={participant.email}
+                        className={`${
+                          participant.selected
+                            ? "border-l-4 border-purple-600 bg-purple-100"
+                            : index % 2 === 0
+                              ? "bg-white"
+                              : "bg-gray-50"
+                        }`}
+                      >
+                        <td className="px-6 py-5 text-lg font-semibold text-slate-900">
+                          {participant.name}
+                        </td>
+                        <td className="px-6 py-5 text-base text-slate-600">
+                          {participant.email}
+                        </td>
+                        <td className="px-6 py-5 text-base text-slate-600">
+                          {participant.phone}
+                        </td>
+                        <td className="px-6 py-5">
+                          <button
+                            className={`rounded-xl px-6 py-3 text-base font-bold ${
+                              participant.selected
+                                ? "bg-purple-600 text-white"
+                                : "bg-purple-100 text-purple-700"
+                            }`}
+                          >
+                            {participant.selected
+                              ? "Selected"
+                              : "Select"}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     );
   };
@@ -2805,6 +4131,959 @@ export default function Training() {
     );
   };
 
+  const renderSearchParticipantMockPage = (
+    currentTarget: HighlightTarget,
+  ) => {
+    const showInactiveList =
+      currentTarget === "search-inactive-list";
+    const showInactiveProfile =
+      currentTarget === "search-profile-inactive-buttons";
+
+    const activeParticipants = [
+      {
+        name: "Emma Johnson",
+        email: "emma.johnson@example.com",
+        phone: "0400 111 222",
+        dob: "14/05/1988",
+        registered: "02/04/2026",
+      },
+      {
+        name: "Liam Brown",
+        email: "liam.brown@example.com",
+        phone: "0400 333 444",
+        dob: "09/11/1979",
+        registered: "18/03/2026",
+      },
+    ];
+
+    const inactiveParticipants = [
+      {
+        name: "Noah Wilson",
+        email: "noah.wilson@example.com",
+        phone: "0400 777 888",
+        dob: "22/08/1992",
+        registered: "21/02/2026",
+      },
+    ];
+
+    const renderProfileButtons = () => (
+      <div
+        ref={
+          showInactiveProfile
+            ? searchProfileInactiveButtonsRef
+            : searchProfileActiveButtonsRef
+        }
+        className="mt-8 flex flex-wrap gap-4"
+      >
+        <button className="flex items-center gap-3 rounded-xl bg-gray-300 px-7 py-4 text-lg font-bold text-gray-800 shadow-lg">
+          <ArrowLeft size={22} />
+          Back to Search
+        </button>
+        <button className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-7 py-4 text-lg font-bold text-white shadow-lg">
+          <Pencil size={22} />
+          Edit Details
+        </button>
+        <button className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 px-7 py-4 text-lg font-bold text-white shadow-lg">
+          <Trash2 size={22} />
+          Delete
+        </button>
+        {showInactiveProfile ? (
+          <button className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-7 py-4 text-lg font-bold text-white shadow-lg">
+            <RotateCcw size={22} />
+            Reactivate Profile
+          </button>
+        ) : (
+          <>
+            <button className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 px-7 py-4 text-lg font-bold text-white shadow-lg">
+              <Plus size={22} />
+              Add to Program
+            </button>
+            <button className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-gray-500 to-gray-600 px-7 py-4 text-lg font-bold text-white shadow-lg">
+              <UserX size={22} />
+              Inactive Profile
+            </button>
+          </>
+        )}
+      </div>
+    );
+
+    if (
+      currentTarget === "search-search" ||
+      currentTarget === "search-active-list" ||
+      currentTarget === "search-inactive-list"
+    ) {
+      return (
+        <div
+          ref={searchTrainingCanvasRef}
+          className="absolute inset-0 bg-[#eef2f7]"
+        >
+          <header className="bg-gradient-to-r from-blue-600 to-blue-700 shadow-lg">
+            <div className="flex items-center justify-between px-10 py-5">
+              <div className="flex items-center gap-6">
+                <img
+                  src={logo}
+                  alt="The Hut Community Centre Logo"
+                  className="h-16 w-auto"
+                />
+                <h1 className="text-4xl font-bold text-white">
+                  The Hut Participation Portal
+                </h1>
+              </div>
+              <button className="flex items-center gap-2 rounded-xl bg-red-600 px-6 py-4 text-2xl font-bold text-white shadow-md">
+                <LogOut size={24} />
+                Logout
+              </button>
+            </div>
+          </header>
+
+          <main className="px-10 py-10">
+            <div className="mx-auto max-w-[1540px]">
+              <div className="mb-8 rounded-[30px] border border-orange-200 bg-white p-10 shadow-sm">
+                <div className="mb-6 flex items-center gap-5">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-500 text-white">
+                    <Search size={30} />
+                  </div>
+                  <div>
+                    <h2 className="text-5xl font-bold text-slate-900">
+                      Find Participant
+                    </h2>
+                    <p className="mt-2 text-lg text-slate-600">
+                      Search for a participant and open their
+                      profile for more detail.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mb-8 rounded-2xl border-2 border-orange-200 bg-orange-50 p-6">
+                  <h3 className="mb-2 text-xl font-bold text-orange-900">
+                    Search Instructions
+                  </h3>
+                  <p className="text-base text-orange-800">
+                    Use the search box below to find
+                    participants by name, email, or phone
+                    number. Click View Profile to open the full
+                    participant record.
+                  </p>
+                </div>
+
+                <div ref={searchSearchRef} className="mb-8">
+                  <div className="relative">
+                    <Search
+                      className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400"
+                      size={28}
+                    />
+                    <div className="flex h-[88px] items-center rounded-[22px] border-4 border-gray-300 bg-white pl-20 pr-6 text-[24px] font-semibold text-slate-500 shadow-sm">
+                      Type a name, email, or phone number...
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  ref={searchActiveListRef}
+                  className="mb-8 overflow-hidden rounded-[28px] border-4 border-green-200 bg-white shadow-sm"
+                >
+                  <div className="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 text-white">
+                    <h3 className="text-2xl font-bold">
+                      Active Participants (2)
+                    </h3>
+                  </div>
+                  <table className="w-full">
+                    <thead className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+                      <tr>
+                        <th className="px-6 py-5 text-left text-lg font-bold">
+                          Name
+                        </th>
+                        <th className="px-6 py-5 text-left text-lg font-bold">
+                          Email
+                        </th>
+                        <th className="px-6 py-5 text-left text-lg font-bold">
+                          Phone
+                        </th>
+                        <th className="px-6 py-5 text-left text-lg font-bold">
+                          Date of Birth
+                        </th>
+                        <th className="px-6 py-5 text-left text-lg font-bold">
+                          Registered
+                        </th>
+                        <th className="px-6 py-5 text-left text-lg font-bold">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {activeParticipants.map(
+                        (participant, index) => (
+                          <tr
+                            key={participant.email}
+                            className={
+                              index % 2 === 0
+                                ? "bg-white"
+                                : "bg-gray-50"
+                            }
+                          >
+                            <td className="px-6 py-5">
+                              <div className="flex items-center gap-3">
+                                <div className="text-lg font-bold text-slate-900">
+                                  {participant.name}
+                                </div>
+                                <span className="rounded-full bg-green-500 px-2 py-1 text-xs font-bold text-white">
+                                  ACTIVE
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-5 text-base text-slate-600">
+                              {participant.email}
+                            </td>
+                            <td className="px-6 py-5 text-base text-slate-600">
+                              {participant.phone}
+                            </td>
+                            <td className="px-6 py-5 text-base text-slate-600">
+                              {participant.dob}
+                            </td>
+                            <td className="px-6 py-5 text-base text-slate-600">
+                              {participant.registered}
+                            </td>
+                            <td className="px-6 py-5">
+                              <button className="flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-base font-bold text-white shadow-md">
+                                <Eye size={20} />
+                                View Profile
+                              </button>
+                            </td>
+                          </tr>
+                        ),
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div
+                  ref={searchInactiveListRef}
+                  className="overflow-hidden rounded-[28px] border-4 border-gray-300 bg-white shadow-sm"
+                >
+                  <div className="flex items-center justify-between bg-gradient-to-r from-gray-500 to-gray-600 px-6 py-4 text-white">
+                    <h3 className="text-2xl font-bold">
+                      Inactive Participants (1)
+                    </h3>
+                    {showInactiveList ? (
+                      <ChevronUp size={30} />
+                    ) : (
+                      <ChevronDown size={30} />
+                    )}
+                  </div>
+
+                  {showInactiveList ? (
+                    <table className="w-full">
+                      <thead className="bg-gradient-to-r from-gray-400 to-gray-500 text-white">
+                        <tr>
+                          <th className="px-6 py-5 text-left text-lg font-bold">
+                            Name
+                          </th>
+                          <th className="px-6 py-5 text-left text-lg font-bold">
+                            Email
+                          </th>
+                          <th className="px-6 py-5 text-left text-lg font-bold">
+                            Phone
+                          </th>
+                          <th className="px-6 py-5 text-left text-lg font-bold">
+                            Date of Birth
+                          </th>
+                          <th className="px-6 py-5 text-left text-lg font-bold">
+                            Registered
+                          </th>
+                          <th className="px-6 py-5 text-left text-lg font-bold">
+                            Action
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {inactiveParticipants.map(
+                          (participant) => (
+                            <tr
+                              key={participant.email}
+                              className="bg-gray-50"
+                            >
+                              <td className="px-6 py-5">
+                                <div className="flex items-center gap-3">
+                                  <div className="text-lg font-bold text-slate-700">
+                                    {participant.name}
+                                  </div>
+                                  <span className="rounded-full bg-red-500 px-2 py-1 text-xs font-bold text-white">
+                                    INACTIVE
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-5 text-base text-slate-600">
+                                {participant.email}
+                              </td>
+                              <td className="px-6 py-5 text-base text-slate-600">
+                                {participant.phone}
+                              </td>
+                              <td className="px-6 py-5 text-base text-slate-600">
+                                {participant.dob}
+                              </td>
+                              <td className="px-6 py-5 text-base text-slate-600">
+                                {participant.registered}
+                              </td>
+                              <td className="px-6 py-5">
+                                <button className="flex items-center gap-2 rounded-xl bg-gray-600 px-5 py-3 text-base font-bold text-white shadow-md">
+                                  <Eye size={20} />
+                                  View Profile
+                                </button>
+                              </td>
+                            </tr>
+                          ),
+                        )}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div className="px-6 py-6 text-lg text-slate-600">
+                      Click to expand and review inactive
+                      participant records.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        ref={searchTrainingCanvasRef}
+        className="absolute inset-0 bg-[#eef2f7]"
+      >
+        <header className="bg-gradient-to-r from-blue-600 to-blue-700 shadow-lg">
+          <div className="flex items-center justify-between px-10 py-5">
+            <div className="flex items-center gap-6">
+              <img
+                src={logo}
+                alt="The Hut Community Centre Logo"
+                className="h-16 w-auto"
+              />
+              <h1 className="text-4xl font-bold text-white">
+                The Hut Participation Portal
+              </h1>
+            </div>
+            <button className="flex items-center gap-2 rounded-xl bg-red-600 px-6 py-4 text-2xl font-bold text-white shadow-md">
+              <LogOut size={24} />
+              Logout
+            </button>
+          </div>
+        </header>
+
+        <main className="px-10 py-10">
+          <div className="mx-auto max-w-[1540px]">
+            <div className="mb-8 rounded-[30px] border border-orange-200 bg-white p-10 shadow-sm">
+              <div className="mb-6 flex items-center gap-5">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-sm">
+                  <User size={64} className="text-orange-600" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-4">
+                    <h2 className="text-5xl font-bold text-slate-900">
+                      Liam Brown
+                    </h2>
+                    <span
+                      className={`rounded-full px-4 py-2 text-lg font-bold text-white ${
+                        showInactiveProfile
+                          ? "bg-red-500"
+                          : "bg-green-500"
+                      }`}
+                    >
+                      {showInactiveProfile
+                        ? "INACTIVE"
+                        : "ACTIVE"}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xl text-slate-600">
+                    Participant Profile
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              ref={searchProfileGeneralRef}
+              className="mb-8 rounded-[28px] border-4 border-orange-200 bg-white p-8 shadow-sm"
+            >
+              <div className="mb-6 text-3xl font-bold text-slate-900">
+                General Info from Registration
+              </div>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="rounded-2xl bg-orange-50 p-6">
+                  <div className="mb-3 flex items-center gap-3 text-xl font-bold text-slate-900">
+                    <Mail
+                      className="text-orange-600"
+                      size={28}
+                    />
+                    Contact Information
+                  </div>
+                  <p className="text-lg text-slate-700">
+                    Email: liam.brown@example.com
+                  </p>
+                  <p className="mt-2 text-lg text-slate-700">
+                    Phone: 0400 333 444
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-orange-50 p-6">
+                  <div className="mb-3 flex items-center gap-3 text-xl font-bold text-slate-900">
+                    <User
+                      className="text-orange-600"
+                      size={28}
+                    />
+                    Personal Information
+                  </div>
+                  <p className="text-lg text-slate-700">
+                    Gender: Male
+                  </p>
+                  <p className="mt-2 text-lg text-slate-700">
+                    Date of Birth: 09/11/1979
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-orange-50 p-6">
+                  <div className="mb-3 flex items-center gap-3 text-xl font-bold text-slate-900">
+                    <Phone
+                      className="text-orange-600"
+                      size={28}
+                    />
+                    Emergency Contact
+                  </div>
+                  <p className="text-lg text-slate-700">
+                    Sarah Brown
+                  </p>
+                  <p className="mt-2 text-lg text-slate-700">
+                    0400 999 111
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-orange-50 p-6">
+                  <div className="mb-3 flex items-center gap-3 text-xl font-bold text-slate-900">
+                    <Globe
+                      className="text-orange-600"
+                      size={28}
+                    />
+                    Cultural Background
+                  </div>
+                  <p className="text-lg text-slate-700">
+                    ATSI: No
+                  </p>
+                  <p className="mt-2 text-lg text-slate-700">
+                    Country of Birth: Australia
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-orange-50 p-6">
+                  <div className="mb-3 flex items-center gap-3 text-xl font-bold text-slate-900">
+                    <MessageSquare
+                      className="text-orange-600"
+                      size={28}
+                    />
+                    Communication Preferences
+                  </div>
+                  <p className="text-lg text-slate-700">
+                    Preferred contact: Phone
+                  </p>
+                  <p className="mt-2 text-lg text-slate-700">
+                    Newsletter: Yes
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-orange-50 p-6">
+                  <div className="mb-3 flex items-center gap-3 text-xl font-bold text-slate-900">
+                    <Camera
+                      className="text-orange-600"
+                      size={28}
+                    />
+                    Photo Consent
+                  </div>
+                  <p className="text-lg text-slate-700">
+                    General photo consent granted
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              ref={searchProfileProgramSpecificRef}
+              className="mb-8 rounded-[28px] border-4 border-purple-200 bg-white p-8 shadow-sm"
+            >
+              <div className="mb-6 text-3xl font-bold text-slate-900">
+                Program-Specific Registration Information
+              </div>
+              <div className="rounded-2xl bg-purple-50 p-6">
+                <div className="mb-4 text-xl font-bold text-purple-900">
+                  Walking Group
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-xl bg-white p-4">
+                    <div className="text-sm font-bold text-purple-700">
+                      Medical Notes
+                    </div>
+                    <div className="mt-2 text-base text-slate-800">
+                      Brings own water bottle
+                    </div>
+                  </div>
+                  <div className="rounded-xl bg-white p-4">
+                    <div className="text-sm font-bold text-purple-700">
+                      Mobility Support
+                    </div>
+                    <div className="mt-2 text-base text-slate-800">
+                      Not required
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              ref={searchProfileEnrolledProgramsRef}
+              className="mb-8 rounded-[28px] border-4 border-orange-200 bg-white p-8 shadow-sm"
+            >
+              <div className="mb-6 flex items-center gap-3 text-3xl font-bold text-slate-900">
+                <BookOpen
+                  className="text-orange-600"
+                  size={32}
+                />
+                Enrolled Programs
+              </div>
+              {showInactiveProfile ? (
+                <div className="rounded-2xl bg-orange-50 p-8 text-center">
+                  <p className="text-xl font-semibold text-slate-700">
+                    Not enrolled in any programs yet
+                  </p>
+                  <p className="mt-2 text-lg text-slate-600">
+                    Use Reactivate Profile to add this
+                    participant back to a program.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="rounded-2xl border-2 border-orange-200 bg-orange-50 p-6">
+                    <div className="mb-2 flex items-center gap-3">
+                      <div className="text-xl font-bold text-slate-900">
+                        Walking Group
+                      </div>
+                      <span className="rounded-full bg-orange-200 px-3 py-1 text-sm font-semibold text-orange-800">
+                        12 sessions attended
+                      </span>
+                    </div>
+                    <p className="text-base text-slate-600">
+                      Monday and Wednesday, 10:00 - 11:00
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border-2 border-orange-200 bg-orange-50 p-6">
+                    <div className="mb-2 flex items-center gap-3">
+                      <div className="text-xl font-bold text-slate-900">
+                        Community Shed
+                      </div>
+                      <span className="rounded-full bg-orange-200 px-3 py-1 text-sm font-semibold text-orange-800">
+                        5 sessions attended
+                      </span>
+                    </div>
+                    <p className="text-base text-slate-600">
+                      Thursday, 13:00 - 15:00
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {renderProfileButtons()}
+          </div>
+        </main>
+      </div>
+    );
+  };
+
+  const renderProgramsMockPage = (
+    currentTarget: HighlightTarget,
+  ) => {
+    const fieldLabelClass =
+      "mb-2 block text-sm font-bold text-slate-700";
+    const inputClass =
+      "flex h-[52px] items-center rounded-xl border-2 border-gray-300 bg-white px-4 text-[15px] text-slate-900";
+    const programCardClass =
+      "rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-md";
+    const showAddModal = currentTarget === "programs-add-modal";
+    const showStaffModal =
+      currentTarget === "programs-manage-staff";
+
+    const renderProgramCard = ({
+      name,
+      description,
+      accent,
+      editDeleteRef,
+      staffRef,
+    }: {
+      name: string;
+      description: string;
+      accent: string;
+      editDeleteRef?: any;
+      staffRef?: any;
+    }) => (
+      <div className={programCardClass}>
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <h4 className="text-2xl font-bold text-slate-900">
+              {name}
+            </h4>
+            <p className="mt-1 text-sm text-slate-600">
+              {description}
+            </p>
+          </div>
+          <div
+            ref={editDeleteRef}
+            className="flex items-center gap-2"
+          >
+            <button className="rounded-xl bg-blue-100 p-3 text-blue-700">
+              <Pencil size={20} />
+            </button>
+            <button className="rounded-xl bg-red-100 p-3 text-red-700">
+              <Trash2 size={20} />
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-3 text-sm text-slate-700">
+          <div className="flex items-center gap-2">
+            <Calendar size={16} className={accent} />
+            <span>Mon, Wed · Weekly</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Calendar size={16} className={accent} />
+            <span>Starts 01 May 2026</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <User size={16} className={accent} />
+            <span>Capacity 20 · Remaining 8</span>
+          </div>
+        </div>
+
+        <button
+          ref={staffRef}
+          className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-purple-100 px-4 py-3 font-bold text-purple-700"
+        >
+          <User size={18} />
+          Manage Staff (2)
+        </button>
+      </div>
+    );
+
+    return (
+      <div
+        ref={programsCanvasRef}
+        className="absolute inset-0 bg-[#eef3f7]"
+      >
+        <header className="bg-gradient-to-r from-blue-600 to-blue-700 shadow-lg">
+          <div className="flex items-center justify-between px-10 py-5">
+            <div className="flex items-center gap-6">
+              <img
+                src={logo}
+                alt="The Hut Community Centre Logo"
+                className="h-16 w-auto"
+              />
+              <h1 className="text-4xl font-bold text-white">
+                The Hut Participation Portal
+              </h1>
+            </div>
+            <button className="flex items-center gap-2 rounded-xl bg-red-600 px-6 py-4 text-2xl font-bold text-white shadow-md">
+              <LogOut size={24} />
+              Logout
+            </button>
+          </div>
+        </header>
+
+        <main className="px-10 py-10">
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h2 className="text-[60px] font-bold leading-none text-[#0f2244]">
+                Manage Programs
+              </h2>
+              <p className="mt-3 text-[22px] text-slate-600">
+                Create, organise, and manage The Hut programs.
+              </p>
+            </div>
+            <button
+              ref={programsAddButtonRef}
+              className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-green-600 to-green-700 px-7 py-4 text-[24px] font-bold text-white shadow-lg"
+            >
+              <Plus size={26} />
+              Add Program
+            </button>
+          </div>
+
+          <div
+            ref={programsCategoriesRef}
+            className="space-y-8"
+          >
+            <div className="space-y-4">
+              <div
+                ref={programsChildrenTitleRef}
+                className="rounded-2xl border-2 border-purple-300 bg-purple-100 px-6 py-4"
+              >
+                <h3 className="text-[30px] font-bold text-purple-900">
+                  Children's Programs
+                </h3>
+                <p className="text-[18px] text-purple-700">
+                  Programs designed for children and families.
+                </p>
+              </div>
+              <div className="grid grid-cols-3 gap-6">
+                {renderProgramCard({
+                  name: "Outdoor Playgroup",
+                  description:
+                    "Weekly playgroup for children and carers.",
+                  accent: "text-purple-600",
+                  editDeleteRef:
+                    currentTarget === "programs-edit-delete"
+                      ? programsEditDeleteRef
+                      : undefined,
+                  staffRef:
+                    currentTarget === "programs-manage-staff"
+                      ? programsManageStaffRef
+                      : undefined,
+                })}
+                {renderProgramCard({
+                  name: "Homework Club",
+                  description:
+                    "After-school homework and study support.",
+                  accent: "text-purple-600",
+                })}
+                {renderProgramCard({
+                  name: "Dungeons & Dragons",
+                  description:
+                    "Creative role-play and social connection.",
+                  accent: "text-purple-600",
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div
+                ref={programsFitnessTitleRef}
+                className="rounded-2xl border-2 border-orange-300 bg-orange-100 px-6 py-4"
+              >
+                <h3 className="text-[30px] font-bold text-orange-900">
+                  Fitness & Wellbeing Programs
+                </h3>
+                <p className="text-[18px] text-orange-700">
+                  Physical activity and health programs.
+                </p>
+              </div>
+              <div className="grid grid-cols-3 gap-6">
+                {renderProgramCard({
+                  name: "Community Fun Fitness",
+                  description:
+                    "Inclusive movement sessions for all levels.",
+                  accent: "text-orange-600",
+                })}
+                {renderProgramCard({
+                  name: "Strength & Balance",
+                  description:
+                    "Falls prevention and balance training.",
+                  accent: "text-orange-600",
+                })}
+                {renderProgramCard({
+                  name: "Walking Group",
+                  description:
+                    "Guided group walks for wellbeing.",
+                  accent: "text-orange-600",
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-4 pb-10">
+              <div
+                ref={programsGeneralTitleRef}
+                className="rounded-2xl border-2 border-green-300 bg-green-100 px-6 py-4"
+              >
+                <h3 className="text-[30px] font-bold text-green-900">
+                  General Programs
+                </h3>
+                <p className="text-[18px] text-green-700">
+                  Community activities and workshops.
+                </p>
+              </div>
+              <div className="grid grid-cols-3 gap-6">
+                {renderProgramCard({
+                  name: "Community Lunch",
+                  description:
+                    "A shared lunch and social connection program.",
+                  accent: "text-green-600",
+                })}
+                {renderProgramCard({
+                  name: "Art Workshop",
+                  description:
+                    "Creative art activities and skill building.",
+                  accent: "text-green-600",
+                })}
+                {renderProgramCard({
+                  name: "Gardening Group",
+                  description:
+                    "Community gardening and sustainability.",
+                  accent: "text-green-600",
+                })}
+              </div>
+            </div>
+          </div>
+        </main>
+
+        {showAddModal && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 px-6">
+            <div
+              ref={programsAddModalRef}
+              className="w-full max-w-3xl rounded-[28px] bg-white p-8 shadow-2xl"
+            >
+              <div className="mb-6 flex items-center justify-between">
+                <h3 className="text-[36px] font-bold text-slate-900">
+                  Add New Program
+                </h3>
+                <button className="rounded-lg p-2 text-slate-500">
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-5">
+                <div className="col-span-2">
+                  <label className={fieldLabelClass}>
+                    Program Name *
+                  </label>
+                  <div className={inputClass}>
+                    Enter program name
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <label className={fieldLabelClass}>
+                    Description
+                  </label>
+                  <div className="h-[92px] rounded-xl border-2 border-gray-300 bg-white px-4 py-3 text-[15px] text-slate-900">
+                    Enter program description
+                  </div>
+                </div>
+                <div>
+                  <label className={fieldLabelClass}>
+                    Recurrence Type *
+                  </label>
+                  <div className={inputClass}>Weekly</div>
+                </div>
+                <div>
+                  <label className={fieldLabelClass}>
+                    Capacity *
+                  </label>
+                  <div className={inputClass}>20</div>
+                </div>
+                <div>
+                  <label className={fieldLabelClass}>
+                    Days *
+                  </label>
+                  <div className={inputClass}>
+                    Monday, Wednesday
+                  </div>
+                </div>
+                <div>
+                  <label className={fieldLabelClass}>
+                    Start Date *
+                  </label>
+                  <div className={inputClass}>
+                    01 / 05 / 2026
+                  </div>
+                </div>
+                <div>
+                  <label className={fieldLabelClass}>
+                    Start Time *
+                  </label>
+                  <div className={inputClass}>09:30 AM</div>
+                </div>
+                <div>
+                  <label className={fieldLabelClass}>
+                    End Time *
+                  </label>
+                  <div className={inputClass}>11:00 AM</div>
+                </div>
+              </div>
+
+              <div className="mt-8 flex items-center justify-end gap-4">
+                <button className="rounded-xl border border-gray-300 px-6 py-3 text-lg font-semibold text-slate-700">
+                  Cancel
+                </button>
+                <button className="rounded-xl bg-green-600 px-6 py-3 text-lg font-bold text-white">
+                  Add Program
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showStaffModal && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 px-6">
+            <div
+              ref={programsManageStaffRef}
+              className="w-full max-w-2xl rounded-[28px] bg-white p-8 shadow-2xl"
+            >
+              <div className="mb-6 flex items-center justify-between">
+                <h3 className="text-[34px] font-bold text-slate-900">
+                  Manage Staff
+                </h3>
+                <button className="rounded-lg p-2 text-slate-500">
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="mb-5 rounded-2xl border border-purple-200 bg-purple-50 p-5">
+                <div className="text-xl font-bold text-purple-900">
+                  Outdoor Playgroup
+                </div>
+                <div className="mt-1 text-base text-purple-700">
+                  Assign staff members to manage this program.
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {[
+                  [
+                    "Haoxin Che",
+                    "Manager / Administrator",
+                    true,
+                  ],
+                  ["Emma Johnson", "Program Coordinator", true],
+                  ["Michael Brown", "Volunteer", false],
+                ].map(([name, role, assigned]) => (
+                  <div
+                    key={String(name)}
+                    className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-5 py-4"
+                  >
+                    <div>
+                      <div className="text-lg font-bold text-slate-900">
+                        {name}
+                      </div>
+                      <div className="text-sm text-slate-600">
+                        {role}
+                      </div>
+                    </div>
+                    <button
+                      className={`rounded-xl px-5 py-2 text-sm font-bold ${
+                        assigned
+                          ? "bg-red-100 text-red-700"
+                          : "bg-blue-100 text-blue-700"
+                      }`}
+                    >
+                      {assigned ? "Remove" : "Assign"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-8 flex items-center justify-end">
+                <button className="rounded-xl border border-gray-300 px-6 py-3 text-lg font-semibold text-slate-700">
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderGenericMockPage = () => {
     return (
       <div className="absolute inset-0 pointer-events-none">
@@ -2841,19 +5120,32 @@ export default function Training() {
         ? "min-h-[2000px]"
         : activeModule.id === "reports"
           ? "min-h-[1750px]"
-          : activeModule.id === "add-participant"
-            ? currentStepData.highlightTarget ===
-              "participant-program-details"
-              ? "min-h-[1900px]"
-              : currentStepData.highlightTarget ===
-                    "participant-children-programs" ||
-                  currentStepData.highlightTarget ===
-                    "participant-fitness-programs" ||
-                  currentStepData.highlightTarget ===
-                    "participant-general-programs"
-                ? "min-h-[1550px]"
-                : "min-h-[2450px]"
-            : "min-h-screen";
+          : activeModule.id === "attendance"
+            ? "min-h-[1700px]"
+            : activeModule.id === "add-to-program"
+              ? "min-h-[1650px]"
+              : activeModule.id === "programs"
+                ? currentStepData.highlightTarget ===
+                  "programs-manage-staff"
+                  ? "min-h-[1700px]"
+                  : "min-h-[1850px]"
+                : activeModule.id === "search"
+                  ? currentStep < 3
+                    ? "min-h-[1900px]"
+                    : "min-h-[3000px]"
+                  : activeModule.id === "add-participant"
+                    ? currentStepData.highlightTarget ===
+                      "participant-program-details"
+                      ? "min-h-[1900px]"
+                      : currentStepData.highlightTarget ===
+                            "participant-children-programs" ||
+                          currentStepData.highlightTarget ===
+                            "participant-fitness-programs" ||
+                          currentStepData.highlightTarget ===
+                            "participant-general-programs"
+                        ? "min-h-[1550px]"
+                        : "min-h-[2450px]"
+                    : "min-h-screen";
 
     return (
       <div
@@ -2866,19 +5158,83 @@ export default function Training() {
               ? renderPortalBasicsMock()
               : activeModule.id === "reports"
                 ? renderReportsMockPage()
-                : activeModule.id === "add-participant"
-                  ? renderAddParticipantMockPage(
-                      currentStepData.highlightTarget,
-                    )
-                  : renderGenericMockPage()}
+                : activeModule.id === "attendance"
+                  ? renderAttendanceMockPage()
+                  : activeModule.id === "add-to-program"
+                    ? renderAddToProgramMockPage()
+                    : activeModule.id === "programs"
+                      ? renderProgramsMockPage(
+                          currentStepData.highlightTarget,
+                        )
+                      : activeModule.id === "search"
+                        ? renderSearchParticipantMockPage(
+                            currentStepData.highlightTarget,
+                          )
+                        : activeModule.id === "add-participant"
+                          ? renderAddParticipantMockPage(
+                              currentStepData.highlightTarget,
+                            )
+                          : renderGenericMockPage()}
           </div>
 
-          <div
-            style={getHighlightStyles(
-              currentStepData.highlightTarget,
-              activeModule.id,
-            )}
-          />
+          {activeModule.id === "programs" &&
+          programsOverlayRects.length > 0 ? (
+            <svg className="absolute inset-0 z-20 h-full w-full pointer-events-none overflow-visible">
+              <defs>
+                <mask
+                  id={`programs-highlight-mask-${currentStep}`}
+                  maskUnits="userSpaceOnUse"
+                >
+                  <rect
+                    x="0"
+                    y="0"
+                    width="100%"
+                    height="100%"
+                    fill="white"
+                  />
+                  {programsOverlayRects.map((rect, index) => (
+                    <rect
+                      key={`mask-${index}`}
+                      x={rect.left}
+                      y={rect.top}
+                      width={rect.width}
+                      height={rect.height}
+                      rx={rect.borderRadius ?? 22}
+                      fill="black"
+                    />
+                  ))}
+                </mask>
+              </defs>
+              <rect
+                x="0"
+                y="0"
+                width="100%"
+                height="100%"
+                fill="rgba(15, 23, 42, 0.58)"
+                mask={`url(#programs-highlight-mask-${currentStep})`}
+              />
+              {programsOverlayRects.map((rect, index) => (
+                <rect
+                  key={`outline-${index}`}
+                  x={rect.left}
+                  y={rect.top}
+                  width={rect.width}
+                  height={rect.height}
+                  rx={rect.borderRadius ?? 22}
+                  fill="none"
+                  stroke="#3B82F6"
+                  strokeWidth="4"
+                />
+              ))}
+            </svg>
+          ) : (
+            <div
+              style={getHighlightStyles(
+                currentStepData.highlightTarget,
+                activeModule.id,
+              )}
+            />
+          )}
 
           <div
             style={{ ...textboxStyle, height: "auto" }}
