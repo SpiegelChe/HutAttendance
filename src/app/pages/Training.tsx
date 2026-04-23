@@ -13,14 +13,11 @@ import {
   Search,
   BarChart3,
   GraduationCap,
-  CheckCircle,
   FolderOpen,
   Home,
   X,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
-  ChevronDown,
   LogOut,
   Calendar,
   Check,
@@ -38,6 +35,8 @@ import {
   Trash2,
   UserX,
   RotateCcw,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import logo from "figma:asset/c717e59cf8f32fe25477e30d5de63135f3057cc8.png";
@@ -161,12 +160,6 @@ const dashboardCardMocks = [
     gradient: "from-indigo-500 to-violet-600",
     icon: GraduationCap,
   },
-  {
-    title: "User Approvals",
-    description: "Review and approve new user registrations",
-    gradient: "from-pink-500 to-fuchsia-500",
-    icon: CheckCircle,
-  },
 ];
 
 const statsMocks = [
@@ -196,7 +189,6 @@ const sidebarItemMocks = [
   "View Reports",
   "Manage Programs",
   "Staff Training",
-  "User Approvals",
 ];
 
 export default function Training() {
@@ -372,7 +364,7 @@ export default function Training() {
           stepNumber: 4,
           title: "Each dashboard card opens a staff function",
           description:
-            "The eight cards on the Dashboard take staff to Mark Attendance, Add New Participant, Add to Program, Find Participant, View Reports, Manage Programs, Staff Training, User Approvals pages.",
+            "The seven cards on the Dashboard take staff to Mark Attendance, Add New Participant, Add to Program, Find Participant, View Reports, Manage Programs, Staff Training pages.",
           highlightTarget: "dashboard-cards",
         },
       ],
@@ -662,44 +654,6 @@ export default function Training() {
           description:
             "Use Manage Staff on a program card to choose which staff members are assigned to that program and confirm the selection.",
           highlightTarget: "programs-manage-staff",
-        },
-      ],
-    },
-    {
-      id: "approvals",
-      title: "User Approvals",
-      description: "Review and approve new user registrations.",
-      icon: CheckCircle,
-      color: "pink",
-      route: "/approvals",
-      steps: [
-        {
-          stepNumber: 1,
-          title: "View pending approvals",
-          description:
-            "See the list of new staff members who have registered and are waiting for approval to access the portal.",
-          highlightTarget: "page-content",
-        },
-        {
-          stepNumber: 2,
-          title: "Review user details",
-          description:
-            "Check each user's name, email, and requested role to verify they should have access.",
-          highlightTarget: "page-content",
-        },
-        {
-          stepNumber: 3,
-          title: "Approve or deny access",
-          description:
-            "Click Approve to grant access or Deny to reject the registration request.",
-          highlightTarget: "button",
-        },
-        {
-          stepNumber: 4,
-          title: "Manage user roles",
-          description:
-            "Approved users can be assigned different roles (staff, manager, admin) based on their responsibilities.",
-          highlightTarget: "form",
         },
       ],
     },
