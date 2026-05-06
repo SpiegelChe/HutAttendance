@@ -1603,6 +1603,63 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
                         />
                       </div>
                     </div>
+
+                    {/* Health Declaration */}
+                    <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
+                      <label className="flex items-start gap-3 cursor-pointer mb-3">
+                        <input
+                          type="checkbox"
+                          checked={data.healthDeclarationSigned || false}
+                          onChange={(e) => onDataChange('fitness', 'healthDeclarationSigned', e.target.checked)}
+                          className="w-6 h-6 mt-1 rounded border-2 border-gray-300"
+                        />
+                        <span className="text-lg font-semibold text-gray-700">
+                          Health Declaration signed <span className="text-red-600">*</span>
+                        </span>
+                      </label>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-600 mb-1">
+                          Date
+                        </label>
+                        <input
+                          type="date"
+                          value={data.healthDeclarationDate || ''}
+                          onChange={(e) => onDataChange('fitness', 'healthDeclarationDate', e.target.value)}
+                          className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Medical Form Received */}
+                    <div>
+                      <label className="block text-lg font-bold text-gray-700 mb-2">
+                        Medical Form Received?
+                      </label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <select
+                            value={data.medicalFormReceived || ''}
+                            onChange={(e) => onDataChange('fitness', 'medicalFormReceived', e.target.value)}
+                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
+                          >
+                            <option value="">Select an option</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                            <option value="n/a">n/a</option>
+                          </select>
+                        </div>
+                        <div>
+                          <input
+                            type="text"
+                            value={data.medicalFormReceivedNotes || ''}
+                            onChange={(e) => onDataChange('fitness', 'medicalFormReceivedNotes', e.target.value)}
+                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
+                            placeholder="Notes (optional)"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </>
                 );
               })()}

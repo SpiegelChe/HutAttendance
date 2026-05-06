@@ -103,17 +103,17 @@ export function Layout({
       adminOnly: true,
     },
     {
-      path: "/programs",
-      icon: FolderOpen,
-      label: "View Programs",
-      color: "gray",
-      adminOnly: true,
-    },
-    {
       path: "/reports",
       icon: BarChart3,
       label: "View Reports",
       color: "teal",
+      adminOnly: true,
+    },
+    {
+      path: "/programs",
+      icon: FolderOpen,
+      label: "Manage Programs",
+      color: "gray",
       adminOnly: true,
     },
     {

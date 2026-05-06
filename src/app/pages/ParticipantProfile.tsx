@@ -839,6 +839,29 @@ export default function ParticipantProfile() {
                           </p>
                         </div>
                       )}
+                      {fitnessData.healthDeclarationSigned && (
+                        <div className="bg-white p-4 rounded-lg">
+                          <p className="text-sm font-bold text-orange-700 mb-1">Health Declaration</p>
+                          <p className="text-base text-gray-900">
+                            ✓ Signed - {fitnessData.healthDeclarationDate
+                              ? new Date(fitnessData.healthDeclarationDate).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })
+                              : 'Date not recorded'}
+                          </p>
+                        </div>
+                      )}
+                      {fitnessData.medicalFormReceived && (
+                        <div className="bg-white p-4 rounded-lg">
+                          <p className="text-sm font-bold text-orange-700 mb-1">Medical Form Received</p>
+                          <p className="text-base text-gray-900">{fitnessData.medicalFormReceived}</p>
+                          {fitnessData.medicalFormReceivedNotes && (
+                            <p className="text-sm text-gray-700 mt-2">Notes: {fitnessData.medicalFormReceivedNotes}</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

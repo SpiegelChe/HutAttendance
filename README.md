@@ -1,7 +1,7 @@
 
-  # hut_prototypev2_23_Apr_2026_Carr
+  # hut_prototypev2_6_May_2026_Carr
 
-  This is a code bundle for hut_prototypev2_23_Apr_2026_Carr. The original project is available at https://www.figma.com/design/QSUP9yM242QL3CXCXRLXbk/hut_prototypev2_23_Apr_2026_Carr.
+  This is a code bundle for hut_prototypev2_6_May_2026_Carr. The original project is available at https://www.figma.com/design/RGK5viisCaxPHNJHw7FVqX/hut_prototypev2_6_May_2026_Carr.
 
   ## Running the code
 

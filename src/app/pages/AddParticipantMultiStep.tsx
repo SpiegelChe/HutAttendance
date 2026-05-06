@@ -292,6 +292,10 @@ export default function AddParticipantMultiStep() {
           setError('Please acknowledge the medical treatment policy');
           return false;
         }
+        if (!data.healthDeclarationSigned) {
+          setError('Please check the Health Declaration signed checkbox');
+          return false;
+        }
       }
     }
 

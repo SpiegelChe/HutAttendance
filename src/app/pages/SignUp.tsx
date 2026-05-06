@@ -117,7 +117,7 @@ export default function SignUp() {
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: undefined, // Disable email confirmation redirect
+          emailRedirectTo: 'https://hut-attendance.vercel.app/',
           data: {
             full_name: formData.fullName,
           },

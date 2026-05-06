@@ -558,6 +558,35 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_attendance
 
 -- Add helpful comments
 COMMENT ON TABLE participants IS 'Stores participant information';
+
+-- Program Specific Data Structure Documentation:
+-- The program_specific_data JSONB column stores additional information required for specific program categories:
+--
+-- For Children's Programs (Outdoor Playgroup, Homework Club, D&D, Intergenerational Mentoring):
+-- { "children": {
+--     childGivenName, childFamilyName, childGender, childDOB, childAboriginalTSI,
+--     childPhotoConsentWebsite, childPhotoConsentSocialMedia, childPhotoConsentAnnualReport,
+--     childPhotoConsentBrochures, childPhotoConsentLocalMedia,
+--     authorisedPerson1Name, authorisedPerson1Phone, authorisedPerson2Name, authorisedPerson2Phone,
+--     custodyIssues, custodyIssuesDetails, ownWayHomePermission, ownWayHomeDetails,
+--     schoolAttending, yearLevel
+--   }
+-- }
+--
+-- For Fitness & Wellbeing Programs (Community Fun Fitness, Strength & Balance, Chi Kung, Walking Group, Men's Moves):
+-- { "fitness": {
+--     healthConditions: [],  -- Array of health conditions
+--     regularExercise: string,  -- Exercise level
+--     medicalProcedures: string,  -- Medical procedures in last 12 months
+--     medicalTreatmentAcknowledged: boolean,  -- Required acknowledgement
+--     medicalTreatmentAcknowledgedDate: date,
+--     healthDeclarationSigned: boolean,  -- Required for fitness programs
+--     healthDeclarationDate: date,
+--     medicalFormReceived: string,  -- "Yes", "No", or "n/a"
+--     medicalFormReceivedNotes: string  -- Optional notes
+--   }
+-- }
+
 COMMENT ON COLUMN participants.gender IS 'Participant gender: Man, Woman, Non-binary, or Prefer not to say';
 COMMENT ON COLUMN participants.township IS 'Adelaide Hills township or Other';
 COMMENT ON COLUMN participants.township_other IS 'Custom township name if Other is selected';
@@ -579,7 +608,7 @@ COMMENT ON COLUMN participants.cultural_identity IS 'Whether participant identif
 COMMENT ON COLUMN participants.cultural_identity_details IS 'Details of cultural identity';
 COMMENT ON COLUMN participants.referral_sources IS 'JSON array of how participant heard about The Hut';
 COMMENT ON COLUMN participants.photo_consent IS 'JSON object of photo/media consent permissions';
-COMMENT ON COLUMN participants.program_specific_data IS 'JSON object of program-specific requirements and information';
+COMMENT ON COLUMN participants.program_specific_data IS 'JSON object of program-specific requirements and information. See detailed structure documentation above.';
 
 COMMENT ON TABLE attendance_records IS 'Stores attendance records for participants in programs';
 COMMENT ON COLUMN attendance_records.id IS 'Unique identifier for the attendance record';

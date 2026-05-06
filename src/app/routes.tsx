@@ -13,7 +13,6 @@ import EditParticipant from './pages/EditParticipant';
 import Attendance from './pages/Attendance';
 import Reports from './pages/Reports';
 import Training from './pages/Training';
-import Approvals from './pages/Approvals';
 import Programs from './pages/Programs';
 import Debug from './pages/Debug';
 
@@ -196,14 +195,6 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <Training />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: '/approvals',
-        element: (
-          <ProtectedRoute>
-            <Approvals />
           </ProtectedRoute>
         ),
       },

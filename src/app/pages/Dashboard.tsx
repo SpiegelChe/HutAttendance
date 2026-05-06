@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
-import { ClipboardCheck, UserPlus, UserCheck, Search, BarChart3, GraduationCap, CheckCircle, FolderOpen } from 'lucide-react';
+import { ClipboardCheck, UserPlus, UserCheck, Search, BarChart3, GraduationCap, FolderOpen } from 'lucide-react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -19,8 +19,8 @@ export default function Dashboard() {
       return user?.role === 'manager' || user?.role === 'admin';
     }
     
-    // Only Admin can access Search, Programs, Reports, and Approvals
-    if (feature === 'search' || feature === 'programs' || feature === 'reports' || feature === 'approvals') {
+    // Only Admin can access Search, Programs, and Reports
+    if (feature === 'search' || feature === 'programs' || feature === 'reports') {
       return user?.role === 'admin';
     }
     
@@ -148,21 +148,6 @@ export default function Dashboard() {
             </p>
           </button>
 
-          {/* User Approvals - Admin Only */}
-          {canAccess('approvals') && (
-            <button
-              onClick={() => navigate('/approvals')}
-              className="bg-gradient-to-br from-pink-500 to-pink-600 text-white p-8 md:p-10 rounded-3xl shadow-2xl hover:shadow-pink-300 hover:scale-105 transition-all duration-300 text-left group"
-            >
-              <div className="bg-white/20 w-20 h-20 md:w-24 md:h-24 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-white/30 transition-colors">
-                <CheckCircle size={48} className="md:w-14 md:h-14" />
-              </div>
-              <h3 className="text-3xl md:text-4xl font-bold mb-3">User Approvals</h3>
-              <p className="text-lg md:text-xl text-pink-100">
-                Review and approve new user registrations
-              </p>
-            </button>
-          )}
         </div>
 
         {/* Quick Stats */}
