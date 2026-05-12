@@ -518,7 +518,7 @@ export default function Training() {
       description: "Search and view participant information.",
       icon: Search,
       color: "orange",
-      allowedRoles: ['staff', 'manager', 'admin'],
+      allowedRoles: ['admin'],
       route: "/search",
       steps: [
         {
@@ -587,7 +587,7 @@ export default function Training() {
       icon: BarChart3,
       color: "teal",
       route: "/reports",
-      allowedRoles: ['manager', 'admin'],
+      allowedRoles: ['admin'],
       steps: [
         {
           stepNumber: 1,
