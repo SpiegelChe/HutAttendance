@@ -21,9 +21,16 @@ export default function Attendance() {
   const [attendance, setAttendance] = useState<Record<string, boolean>>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [todaysPrograms, setTodaysPrograms] = useState<Program[]>([]);
+  const [programsForSelectedDate, setProgramsForSelectedDate] = useState<Program[]>([]);
   const [programParticipants, setProgramParticipants] = useState<EnrolledParticipant[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Get day of week for a given date (0-6, where 0 is Sunday)
+  const getDayOfWeek = (dateString: string) => {
+    const selectedDate = new Date(dateString + 'T00:00:00');
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[selectedDate.getDay()];
+  };
 
   // Get today's day of week (0-6, where 0 is Sunday)
   const getTodayDayOfWeek = () => {
@@ -35,11 +42,11 @@ export default function Attendance() {
   // Format today's date nicely
   const getFormattedDate = () => {
     const today = new Date();
-    const options: Intl.DateTimeFormatOptions = { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     };
     return today.toLocaleDateString('en-AU', options);
   };
@@ -56,6 +63,21 @@ export default function Attendance() {
     }
   }, [selectedProgram]);
 
+  // Update programs list when date changes
+  useEffect(() => {
+    if (programs.length > 0) {
+      filterProgramsByDate(date);
+    }
+  }, [date, programs]);
+
+  const filterProgramsByDate = (selectedDate: string) => {
+    const dayOfWeek = getDayOfWeek(selectedDate);
+    const filteredPrograms = programs.filter(program =>
+      program.days && program.days.includes(dayOfWeek)
+    );
+    setProgramsForSelectedDate(filteredPrograms);
+  };
+
   const fetchPrograms = async () => {
     try {
       let programsData: Program[] = [];
@@ -64,7 +86,7 @@ export default function Attendance() {
       if (user?.role === 'staff') {
         // Get the current user's ID from Supabase
         const { data: { user: authUser } } = await supabase.auth.getUser();
-        
+
         if (authUser) {
           // First, get the program IDs this staff member is assigned to
           const { data: assignments, error: assignError } = await supabase
@@ -101,13 +123,12 @@ export default function Attendance() {
       }
 
       setPrograms(programsData);
-
-      // Filter programs that occur today
-      const todayDay = getTodayDayOfWeek();
-      const programsToday = programsData.filter(program => 
-        program.days && program.days.includes(todayDay)
+      // Filter programs based on the selected date
+      const dayOfWeek = getDayOfWeek(date);
+      const filteredPrograms = programsData.filter(program =>
+        program.days && program.days.includes(dayOfWeek)
       );
-      setTodaysPrograms(programsToday);
+      setProgramsForSelectedDate(filteredPrograms);
     } catch (err) {
       console.error('Error fetching programs:', err);
     }
@@ -236,19 +257,39 @@ export default function Attendance() {
             </div>
           </div>
 
-          {todaysPrograms.length === 0 && (
+          {/* Date Selection - Moved up so it updates the programs list */}
+          <div className="mb-8 bg-gray-50 p-6 rounded-xl">
+            <div>
+              <label htmlFor="date" className="block text-lg font-bold text-gray-700 mb-3">
+                Date *
+              </label>
+              <input
+                id="date"
+                type="date"
+                value={date}
+                onChange={(e) => {
+                  setDate(e.target.value);
+                  setSelectedProgram(''); // Reset selected program when date changes
+                  setAttendance({});
+                }}
+                className="w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-500 focus:border-blue-500 outline-none font-semibold"
+              />
+            </div>
+          </div>
+
+          {programsForSelectedDate.length === 0 && (
             <div className="mb-8 bg-yellow-50 border-4 border-yellow-300 rounded-2xl p-6 text-center">
               <p className="text-xl font-bold text-yellow-900 mb-2">
-                No Programs Scheduled for {getTodayDayOfWeek()}
+                No Programs Scheduled for {getDayOfWeek(date)}
               </p>
               <p className="text-base text-yellow-700 font-semibold">
-                There are no programs to mark attendance for today
+                There are no programs to mark attendance for this date
               </p>
             </div>
           )}
 
-          {/* Program Selection - Only Today's Programs */}
-          {todaysPrograms.length > 0 && (
+          {/* Program Selection - Programs for Selected Date */}
+          {programsForSelectedDate.length > 0 && (
             <div className="mb-8 bg-gray-50 p-6 rounded-xl">
               <div>
                 <label htmlFor="program" className="block text-lg font-bold text-gray-700 mb-3">
@@ -264,7 +305,7 @@ export default function Attendance() {
                   className="w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-500 focus:border-blue-500 outline-none font-semibold"
                 >
                   <option value="">Choose a program...</option>
-                  {todaysPrograms.map(program => (
+                  {programsForSelectedDate.map(program => (
                     <option key={program.id} value={program.id}>
                       {program.name} • {program.start_time}-{program.end_time}
                     </option>
@@ -273,22 +314,6 @@ export default function Attendance() {
               </div>
             </div>
           )}
-
-          {/* Date Selection */}
-          <div className="mb-8 bg-gray-50 p-6 rounded-xl">
-            <div>
-              <label htmlFor="date" className="block text-lg font-bold text-gray-700 mb-3">
-                Date *
-              </label>
-              <input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-500 focus:border-blue-500 outline-none font-semibold"
-              />
-            </div>
-          </div>
 
           {/* Attendance List */}
           {selectedProgram && (
