@@ -49,7 +49,6 @@ interface TrainingModule {
   color: string;
   route: string;
   steps: TrainingStep[];
-  allowedRoles: Array<'staff' | 'manager' | 'admin'>;
 }
 
 type HighlightTarget =
@@ -330,7 +329,8 @@ export default function Training() {
   const [programsOverlayRects, setProgramsOverlayRects] =
     useState<OverlayRect[]>([]);
 
-  const trainingModules: TrainingModule[] = [
+  // Define all training modules
+  const allTrainingModules: TrainingModule[] = [
     {
       id: "basics",
       title: "Staff Portal Basics",
@@ -339,7 +339,6 @@ export default function Training() {
       icon: Home,
       color: "gray",
       route: "/dashboard",
-      allowedRoles: ['staff', 'manager', 'admin'],
       steps: [
         {
           stepNumber: 1,
@@ -379,7 +378,6 @@ export default function Training() {
       icon: ClipboardCheck,
       color: "blue",
       route: "/attendance",
-      allowedRoles: ['staff', 'manager', 'admin'],
       steps: [
         {
           stepNumber: 1,
@@ -411,7 +409,6 @@ export default function Training() {
       icon: UserPlus,
       color: "green",
       route: "/add-participant-multistep",
-      allowedRoles: ['manager', 'admin'],
       steps: [
         {
           stepNumber: "1.1",
@@ -487,7 +484,6 @@ export default function Training() {
       icon: UserCheck,
       color: "purple",
       route: "/add-to-program",
-      allowedRoles: ['manager', 'admin'],
       steps: [
         {
           stepNumber: 1,
@@ -518,7 +514,6 @@ export default function Training() {
       description: "Search and view participant information.",
       icon: Search,
       color: "orange",
-      allowedRoles: ['admin'],
       route: "/search",
       steps: [
         {
@@ -587,7 +582,6 @@ export default function Training() {
       icon: BarChart3,
       color: "teal",
       route: "/reports",
-      allowedRoles: ['admin'],
       steps: [
         {
           stepNumber: 1,
@@ -633,7 +627,6 @@ export default function Training() {
       icon: FolderOpen,
       color: "amber",
       route: "/programs",
-      allowedRoles: ['admin'],
       steps: [
         {
           stepNumber: 1,
@@ -666,6 +659,31 @@ export default function Training() {
       ],
     },
   ];
+
+  // Filter training modules based on user role
+  const canAccessModule = (moduleId: string) => {
+    // Everyone can access basics and attendance
+    if (moduleId === 'basics' || moduleId === 'attendance') {
+      return true;
+    }
+
+    // Manager and Admin can access add-participant and add-to-program
+    if (moduleId === 'add-participant' || moduleId === 'add-to-program') {
+      return user?.role === 'manager' || user?.role === 'admin';
+    }
+
+    // Only Admin can access search, reports, and programs
+    if (moduleId === 'search' || moduleId === 'reports' || moduleId === 'programs') {
+      return user?.role === 'admin';
+    }
+
+    return false;
+  };
+
+  // Filter modules based on role
+  const trainingModules = allTrainingModules.filter(module =>
+    canAccessModule(module.id)
+  );
 
   useEffect(() => {
     if (!activeModule) {
@@ -1068,10 +1086,6 @@ export default function Training() {
   }, [activeModule, currentStep]);
 
   const handleStartWalkthrough = (module: TrainingModule) => {
-    // Check if user has access to this module
-    if (!module.allowedRoles.includes(user?.role || 'staff')) {
-      return;
-    }
     setActiveModule(module);
     setCurrentStep(0);
   };
@@ -5293,11 +5307,6 @@ export default function Training() {
               const module = trainingModules[0];
               const Icon = module.icon;
 
-              // Check if user has access to the basics module
-              if (!module.allowedRoles.includes(user?.role || 'staff')) {
-                return null;
-              }
-
               return (
                 <div className="rounded-3xl bg-gradient-to-br from-indigo-500 to-indigo-600 p-8 text-white shadow-2xl transition-all duration-300 hover:scale-[1.02] hover:shadow-indigo-300 md:p-10">
                   <div className="flex h-full flex-col">
@@ -5343,7 +5352,7 @@ export default function Training() {
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
-            {trainingModules.slice(1).filter(module => module.allowedRoles.includes(user?.role || 'staff')).map((module) => {
+            {trainingModules.slice(1).map((module) => {
               const Icon = module.icon;
               const colors = getColorClasses(module.color);
 

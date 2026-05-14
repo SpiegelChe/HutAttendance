@@ -1,13 +1,25 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { Layout } from '../components/Layout';
-import { ArrowLeft, User, Mail, Phone, Calendar, MapPin, FileText, BookOpen, Clock, ChevronDown, ChevronUp, Users, Edit, Trash2, UserMinus, LogOut } from 'lucide-react';
+import { ArrowLeft, User, Mail, Phone, Calendar, MapPin, FileText, BookOpen, Clock, ChevronDown, ChevronUp, Users, Edit, Trash2, UserMinus, LogOut, ClipboardCheck, Check, X, UserCheck, CheckCircle, XCircle, History } from 'lucide-react';
 import { supabase, Participant, Program, isSupabaseConfigured } from '../../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 
+interface AttendanceRecord {
+  id: string;
+  date: string;
+  status: 'present' | 'absent';
+  created_at?: string;
+}
+
 interface EnrolledProgram extends Program {
   enrolled_at?: string;
+  start_date?: string;
+  end_date?: string;
+  is_active?: boolean;
+  withdrawal_reason?: string;
   attendance_count?: number;
+  attendance_records?: AttendanceRecord[];
   total_sessions?: number;
   enrollment_notes?: string;
   enrollment_data?: any; // Program-specific enrollment data
@@ -27,8 +39,16 @@ export default function ParticipantProfile() {
   const [deleting, setDeleting] = useState(false);
   const [showUnenrollConfirm, setShowUnenrollConfirm] = useState(false);
   const [showUnenrollAllConfirm, setShowUnenrollAllConfirm] = useState(false);
+  const [showReactivateConfirm, setShowReactivateConfirm] = useState(false);
+  const [showReenrollConfirm, setShowReenrollConfirm] = useState(false);
   const [programToUnenroll, setProgramToUnenroll] = useState<EnrolledProgram | null>(null);
+  const [programToReenroll, setProgramToReenroll] = useState<EnrolledProgram | null>(null);
   const [unenrolling, setUnenrolling] = useState(false);
+  const [reenrolling, setReenrolling] = useState(false);
+  const [withdrawalDate, setWithdrawalDate] = useState(new Date().toISOString().split('T')[0]);
+  const [deactivationDate, setDeactivationDate] = useState(new Date().toISOString().split('T')[0]);
+  const [reactivationDate, setReactivationDate] = useState(new Date().toISOString().split('T')[0]);
+  const [reenrollmentDate, setReenrollmentDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     if (id) {
@@ -54,11 +74,15 @@ export default function ParticipantProfile() {
       if (participantError) throw participantError;
       setParticipant(participantData);
 
-      // Fetch enrolled programs
+      // Fetch enrolled programs (including inactive ones for historical view)
       const { data: enrollmentsData, error: enrollmentsError } = await supabase
         .from('program_enrollments')
         .select(`
           enrolled_at,
+          start_date,
+          end_date,
+          is_active,
+          withdrawal_reason,
           programs (
             id,
             name,
@@ -69,7 +93,8 @@ export default function ParticipantProfile() {
             capacity
           )
         `)
-        .eq('participant_id', id);
+        .eq('participant_id', id)
+        .order('start_date', { ascending: false });
 
       if (enrollmentsError) throw enrollmentsError;
 
@@ -110,15 +135,17 @@ export default function ParticipantProfile() {
 
           // Fetch attendance records for this program
           let attendance_count = 0;
+          let attendance_records: AttendanceRecord[] = [];
           if (programId) {
             const { data: attendanceData } = await supabase
               .from('attendance_records')
-              .select('status')
+              .select('id, date, status, created_at')
               .eq('program_id', programId)
               .eq('participant_id', id)
-              .eq('status', 'present');
+              .order('date', { ascending: false });
 
-            attendance_count = attendanceData?.length || 0;
+            attendance_records = attendanceData || [];
+            attendance_count = attendanceData?.filter(a => a.status === 'present').length || 0;
           }
 
           // Get program-specific enrollment data if it exists
@@ -129,7 +156,12 @@ export default function ParticipantProfile() {
           return {
             ...enrollment.programs,
             enrolled_at: enrollment.enrolled_at,
+            start_date: enrollment.start_date,
+            end_date: enrollment.end_date,
+            is_active: enrollment.is_active,
+            withdrawal_reason: enrollment.withdrawal_reason,
             attendance_count,
+            attendance_records,
             enrollment_data: enrollmentData
           };
         })
@@ -205,12 +237,22 @@ export default function ParticipantProfile() {
   const handleUnenrollFromProgram = async () => {
     if (!id || !programToUnenroll?.id || !isSupabaseConfigured) return;
 
+    if (!withdrawalDate) {
+      setError('Please select a withdrawal date');
+      return;
+    }
+
     setUnenrolling(true);
     try {
-      // Delete the enrollment record
+      // Update the enrollment record to mark it as inactive (historical tracking)
+      const withdrawalDateTime = new Date(withdrawalDate).toISOString();
       const { error: enrollmentError } = await supabase
         .from('program_enrollments')
-        .delete()
+        .update({
+          is_active: false,
+          end_date: withdrawalDateTime,
+          withdrawal_reason: 'Withdrawn by staff'
+        })
         .eq('participant_id', id)
         .eq('program_id', programToUnenroll.id);
 
@@ -221,6 +263,7 @@ export default function ParticipantProfile() {
 
       setShowUnenrollConfirm(false);
       setProgramToUnenroll(null);
+      setWithdrawalDate(new Date().toISOString().split('T')[0]);
     } catch (err) {
       console.error('Error unenrolling from program:', err);
       setError('Failed to unenroll from program. Please try again.');
@@ -233,20 +276,44 @@ export default function ParticipantProfile() {
   const handleUnenrollFromAllPrograms = async () => {
     if (!id || !isSupabaseConfigured) return;
 
+    if (!deactivationDate) {
+      setError('Please select a deactivation date');
+      return;
+    }
+
     setUnenrolling(true);
     try {
-      // Delete all enrollment records for this participant
+      const deactivationDateTime = new Date(deactivationDate).toISOString();
+
+      // Update all active enrollment records to mark them as inactive
       const { error: enrollmentError } = await supabase
         .from('program_enrollments')
-        .delete()
-        .eq('participant_id', id);
+        .update({
+          is_active: false,
+          end_date: deactivationDateTime,
+          withdrawal_reason: 'Profile deactivated'
+        })
+        .eq('participant_id', id)
+        .eq('is_active', true);
 
       if (enrollmentError) throw enrollmentError;
+
+      // Update participant to mark as inactive
+      const { error: participantError } = await supabase
+        .from('participants')
+        .update({
+          is_active: false,
+          deactivated_at: deactivationDateTime
+        })
+        .eq('id', id);
+
+      if (participantError) throw participantError;
 
       // Refresh the participant data
       await fetchParticipant();
 
       setShowUnenrollAllConfirm(false);
+      setDeactivationDate(new Date().toISOString().split('T')[0]);
     } catch (err) {
       console.error('Error making profile inactive:', err);
       setError('Failed to make profile inactive. Please try again.');
@@ -256,9 +323,106 @@ export default function ParticipantProfile() {
     }
   };
 
-  const handleReactivateProfile = () => {
-    // Navigate to Add to Program page to reactivate by enrolling in programs
-    navigate('/add-to-program');
+  const handleReactivateProfile = async () => {
+    if (!id || !isSupabaseConfigured) return;
+
+    if (!reactivationDate) {
+      setError('Please select a reactivation date');
+      return;
+    }
+
+    setUnenrolling(true);
+    try {
+      // Convert date to ISO string at noon UTC to avoid timezone issues
+      const [year, month, day] = reactivationDate.split('-');
+      const reactivationDateTime = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0)).toISOString();
+
+      console.log('Selected reactivation date:', reactivationDate);
+      console.log('Converted to ISO:', reactivationDateTime);
+
+      // Update participant to mark as active
+      const { error: participantError } = await supabase
+        .from('participants')
+        .update({
+          is_active: true,
+          reactivated_at: reactivationDateTime
+        })
+        .eq('id', id);
+
+      if (participantError) throw participantError;
+
+      // Re-activate all enrollments that were deactivated when profile became inactive
+      const { error: enrollmentError } = await supabase
+        .from('program_enrollments')
+        .update({
+          is_active: true,
+          start_date: reactivationDateTime,
+          end_date: null,
+          withdrawal_reason: null
+        })
+        .eq('participant_id', id)
+        .eq('is_active', false)
+        .eq('withdrawal_reason', 'Profile deactivated');
+
+      if (enrollmentError) throw enrollmentError;
+
+      // Refresh the participant data
+      await fetchParticipant();
+
+      setShowReactivateConfirm(false);
+      setReactivationDate(new Date().toISOString().split('T')[0]);
+    } catch (err) {
+      console.error('Error reactivating profile:', err);
+      setError('Failed to reactivate profile. Please try again.');
+    } finally {
+      setUnenrolling(false);
+    }
+  };
+
+  const handleReenrollInProgram = async () => {
+    if (!id || !programToReenroll?.id || !isSupabaseConfigured) return;
+
+    if (!reenrollmentDate) {
+      setError('Please select a re-enrollment date');
+      return;
+    }
+
+    setReenrolling(true);
+    try {
+      // Convert date to ISO string at noon UTC to avoid timezone issues
+      const [year, month, day] = reenrollmentDate.split('-');
+      const reenrollmentDateTime = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0)).toISOString();
+
+      console.log('Selected re-enrollment date:', reenrollmentDate);
+      console.log('Converted to ISO:', reenrollmentDateTime);
+
+      // Update the enrollment record to mark it as active again
+      const { error: enrollmentError } = await supabase
+        .from('program_enrollments')
+        .update({
+          is_active: true,
+          start_date: reenrollmentDateTime,
+          end_date: null,
+          withdrawal_reason: null
+        })
+        .eq('participant_id', id)
+        .eq('program_id', programToReenroll.id);
+
+      if (enrollmentError) throw enrollmentError;
+
+      // Refresh the participant data
+      await fetchParticipant();
+
+      setShowReenrollConfirm(false);
+      setProgramToReenroll(null);
+      setReenrollmentDate(new Date().toISOString().split('T')[0]);
+    } catch (err) {
+      console.error('Error re-enrolling in program:', err);
+      setError('Failed to re-enroll in program. Please try again.');
+      setShowReenrollConfirm(false);
+    } finally {
+      setReenrolling(false);
+    }
   };
 
   if (loading) {
@@ -307,7 +471,7 @@ export default function ParticipantProfile() {
                 <h2 className="text-4xl font-bold mb-2">
                   {participant.first_name} {participant.last_name}
                 </h2>
-                {enrolledPrograms.length === 0 ? (
+                {enrolledPrograms.filter(p => p.is_active !== false).length === 0 ? (
                   <span className="px-4 py-2 bg-red-500 text-white rounded-full text-lg font-bold">
                     INACTIVE
                   </span>
@@ -884,7 +1048,14 @@ export default function ParticipantProfile() {
               <p className="text-lg text-gray-600 mt-2">Click "Add to Program" below to enroll this participant</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <>
+              {enrolledPrograms.filter(p => p.is_active !== false).length === 0 && (
+                <div className="bg-yellow-50 p-6 rounded-xl text-center border-2 border-yellow-300 mb-4">
+                  <p className="text-lg text-yellow-900 font-semibold">⚠️ All enrollments have been withdrawn</p>
+                  <p className="text-base text-yellow-800 mt-1">Showing historical program enrollments below</p>
+                </div>
+              )}
+              <div className="space-y-4">
               {enrolledPrograms.map((program) => {
                 const isExpanded = expandedPrograms.has(program.id || '');
                 return (
@@ -899,12 +1070,66 @@ export default function ParticipantProfile() {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
+                          <div className="flex items-center gap-3 mb-3">
                             <h4 className="text-xl font-bold text-gray-900">{program.name}</h4>
+                            {program.is_active === false ? (
+                              <span className="px-3 py-1 bg-red-500 text-white rounded-full text-sm font-bold">
+                                WITHDRAWN
+                              </span>
+                            ) : (
+                              <span className="px-3 py-1 bg-green-500 text-white rounded-full text-sm font-bold">
+                                ACTIVE
+                              </span>
+                            )}
                             <span className="px-3 py-1 bg-orange-200 text-orange-800 rounded-full text-sm font-semibold">
-                              {program.attendance_count || 0} sessions attended
+                              {program.attendance_count || 0} attended
                             </span>
                           </div>
+
+                          {/* Enrollment Date - Prominently Displayed */}
+                          {program.start_date && (
+                            <div className="bg-green-100 border-2 border-green-300 px-4 py-3 rounded-lg mb-3">
+                              <div className="flex items-center gap-3">
+                                <Calendar className="text-green-700" size={22} />
+                                <div>
+                                  <span className="text-xs font-bold text-green-700 block">Enrolled On</span>
+                                  <span className="text-lg font-bold text-green-900">
+                                    {new Date(program.start_date).toLocaleDateString('en-US', {
+                                      weekday: 'long',
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric'
+                                    })}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Withdrawal Date - Show for inactive enrollments */}
+                          {program.is_active === false && program.end_date && (
+                            <div className="bg-red-100 border-2 border-red-300 px-4 py-3 rounded-lg mb-3">
+                              <div className="flex items-center gap-3">
+                                <Calendar className="text-red-700" size={22} />
+                                <div>
+                                  <span className="text-xs font-bold text-red-700 block">Withdrawn On</span>
+                                  <span className="text-lg font-bold text-red-900">
+                                    {new Date(program.end_date).toLocaleDateString('en-US', {
+                                      weekday: 'long',
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric'
+                                    })}
+                                  </span>
+                                  {program.withdrawal_reason && (
+                                    <span className="text-sm text-red-700 block mt-1">
+                                      Reason: {program.withdrawal_reason}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
 
                           {program.description && (
                             <p className="text-base text-gray-600 mb-3">{program.description}</p>
@@ -923,18 +1148,6 @@ export default function ParticipantProfile() {
                               <div className="flex items-center gap-2">
                                 <Users className="text-orange-600" size={18} />
                                 <span>Capacity: {program.capacity}</span>
-                              </div>
-                            )}
-                            {program.enrolled_at && (
-                              <div className="flex items-center gap-2">
-                                <Calendar className="text-orange-600" size={18} />
-                                <span className="text-sm">
-                                  Enrolled: {new Date(program.enrolled_at).toLocaleDateString('en-US', {
-                                    year: 'numeric',
-                                    month: 'short',
-                                    day: 'numeric'
-                                  })}
-                                </span>
                               </div>
                             )}
                           </div>
@@ -959,20 +1172,39 @@ export default function ParticipantProfile() {
                     {/* Expanded Details */}
                     {isExpanded && (
                       <div className="px-6 pb-6 border-t-2 border-orange-200 pt-4 space-y-4">
-                        {/* Unenroll Button */}
-                        <div className="flex justify-end">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setProgramToUnenroll(program);
-                              setShowUnenrollConfirm(true);
-                            }}
-                            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg font-bold transition-all shadow-lg hover:shadow-xl"
-                          >
-                            <UserMinus size={20} />
-                            Unenroll from this Program
-                          </button>
-                        </div>
+                        {/* Unenroll Button - Only show for active enrollments */}
+                        {program.is_active !== false && (
+                          <div className="flex justify-end">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setProgramToUnenroll(program);
+                                setShowUnenrollConfirm(true);
+                              }}
+                              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg font-bold transition-all shadow-lg hover:shadow-xl"
+                            >
+                              <UserMinus size={20} />
+                              Unenroll from this Program
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Re-enroll Button - Only show for inactive enrollments */}
+                        {program.is_active === false && (
+                          <div className="flex justify-end">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setProgramToReenroll(program);
+                                setShowReenrollConfirm(true);
+                              }}
+                              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-bold transition-all shadow-lg hover:shadow-xl"
+                            >
+                              <UserCheck size={20} />
+                              Re-enroll in this Program
+                            </button>
+                          </div>
+                        )}
 
                         {/* Program Details */}
                         <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-5 rounded-lg border-2 border-blue-300">
@@ -1009,11 +1241,24 @@ export default function ParticipantProfile() {
                               <span className="text-sm font-bold text-blue-700 mb-1 block">Attendance</span>
                               <span className="text-base text-gray-900">{program.attendance_count || 0} sessions attended</span>
                             </div>
-                            {program.enrolled_at && (
+                            {program.start_date && (
                               <div className="bg-white p-4 rounded-lg shadow-sm">
-                                <span className="text-sm font-bold text-blue-700 mb-1 block">Enrollment Date</span>
+                                <span className="text-sm font-bold text-green-700 mb-1 block">Start Date</span>
                                 <span className="text-base text-gray-900">
-                                  {new Date(program.enrolled_at).toLocaleDateString('en-US', {
+                                  {new Date(program.start_date).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                  })}
+                                </span>
+                              </div>
+                            )}
+                            {program.end_date && (
+                              <div className="bg-white p-4 rounded-lg shadow-sm">
+                                <span className="text-sm font-bold text-red-700 mb-1 block">Withdrawal Date</span>
+                                <span className="text-base text-gray-900">
+                                  {new Date(program.end_date).toLocaleDateString('en-US', {
+                                    weekday: 'long',
                                     year: 'numeric',
                                     month: 'long',
                                     day: 'numeric'
@@ -1023,6 +1268,56 @@ export default function ParticipantProfile() {
                             )}
                           </div>
                         </div>
+
+                        {/* Attendance Records */}
+                        {program.attendance_records && program.attendance_records.length > 0 && (
+                          <div className="bg-gradient-to-r from-green-50 to-green-100 p-5 rounded-lg border-2 border-green-300">
+                            <div className="flex items-center gap-2 mb-4">
+                              <History className="text-green-600" size={22} />
+                              <h5 className="font-bold text-green-900 text-lg">
+                                Attendance History ({program.attendance_records.length} records)
+                              </h5>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
+                              {program.attendance_records.map((record) => (
+                                <div
+                                  key={record.id}
+                                  className={`p-4 rounded-lg shadow-sm border-2 ${
+                                    record.status === 'present'
+                                      ? 'bg-white border-green-300'
+                                      : 'bg-gray-50 border-gray-300'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2 mb-2">
+                                    {record.status === 'present' ? (
+                                      <CheckCircle className="text-green-600" size={20} />
+                                    ) : (
+                                      <XCircle className="text-gray-400" size={20} />
+                                    )}
+                                    <span
+                                      className={`text-sm font-bold ${
+                                        record.status === 'present' ? 'text-green-700' : 'text-gray-600'
+                                      }`}
+                                    >
+                                      {record.status === 'present' ? 'Present' : 'Absent'}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-gray-700">
+                                    <Calendar size={16} />
+                                    <span className="text-sm font-semibold">
+                                      {new Date(record.date).toLocaleDateString('en-US', {
+                                        weekday: 'short',
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric'
+                                      })}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
                         {/* Program-Specific Registration Information */}
                         {program.enrollment_data && Object.keys(program.enrollment_data).length > 0 ? (
@@ -1065,19 +1360,14 @@ export default function ParticipantProfile() {
                               })}
                             </div>
                           </div>
-                        ) : (
-                          <div className="bg-orange-50 p-6 rounded-lg text-center">
-                            <FileText className="mx-auto mb-3 text-orange-400" size={40} />
-                            <p className="text-lg text-gray-700 font-semibold">No program-specific registration data</p>
-                            <p className="text-base text-gray-600 mt-2">This participant was enrolled without additional program-specific information</p>
-                          </div>
-                        )}
+                        ) : null}
                       </div>
                     )}
                   </div>
                 );
               })}
-            </div>
+              </div>
+            </>
           )}
         </div>
 
@@ -1110,14 +1400,24 @@ export default function ParticipantProfile() {
             </>
           )}
 
-          <button
-            onClick={() => navigate('/add-to-program')}
-            className="flex-1 px-8 py-5 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-xl"
-          >
-            {enrolledPrograms.length === 0 ? 'Reactivate Profile - Add to Program' : 'Add to Program'}
-          </button>
+          {/* Show Reactivate button only if there are inactive programs from deactivation */}
+          {enrolledPrograms.filter(p => p.is_active === false && p.withdrawal_reason === 'Profile deactivated').length > 0 ? (
+            <button
+              onClick={() => setShowReactivateConfirm(true)}
+              className="flex-1 px-8 py-5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-xl"
+            >
+              Reactivate Profile & Re-enroll Programs
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate('/add-to-program')}
+              className="flex-1 px-8 py-5 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-xl"
+            >
+              Add to Program
+            </button>
+          )}
 
-          {enrolledPrograms.length > 0 && (
+          {enrolledPrograms.filter(p => p.is_active !== false).length > 0 && (
             <button
               onClick={() => setShowUnenrollAllConfirm(true)}
               className="flex items-center justify-center gap-3 px-8 py-5 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-xl"
@@ -1182,9 +1482,25 @@ export default function ParticipantProfile() {
                 Are you sure you want to unenroll <span className="font-bold">{participant?.first_name} {participant?.last_name}</span> from <span className="font-bold">{programToUnenroll.name}</span>?
               </p>
 
-              <p className="text-base text-orange-600 font-semibold mb-6">
+              <p className="text-base text-orange-600 font-semibold mb-4">
                 The participant will be removed from this program. Attendance records will be kept for historical purposes.
               </p>
+
+              <div className="mb-6">
+                <label className="block text-lg font-bold text-gray-900 mb-2">
+                  Withdrawal Date
+                </label>
+                <input
+                  type="date"
+                  value={withdrawalDate}
+                  onChange={(e) => setWithdrawalDate(e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+                />
+                <p className="text-sm text-gray-600 mt-2">
+                  Select the date when the participant left this program
+                </p>
+              </div>
 
               <div className="flex gap-4">
                 <button
@@ -1209,6 +1525,151 @@ export default function ParticipantProfile() {
           </div>
         )}
 
+        {/* Re-enroll in Program Confirmation Modal */}
+        {showReenrollConfirm && programToReenroll && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border-4 border-green-400">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-3 bg-green-100 rounded-full">
+                  <UserCheck size={32} className="text-green-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900">Re-enroll in Program</h3>
+              </div>
+
+              <p className="text-lg text-gray-700 mb-6">
+                Re-enroll <span className="font-bold">{participant?.first_name} {participant?.last_name}</span> in <span className="font-bold">{programToReenroll.name}</span>?
+              </p>
+
+              <p className="text-base text-green-600 font-semibold mb-4">
+                The participant will be enrolled in this program again. Previous attendance records will be preserved.
+              </p>
+
+              <div className="mb-6">
+                <label className="block text-lg font-bold text-gray-900 mb-2">
+                  Re-enrollment Date
+                </label>
+                <input
+                  type="date"
+                  value={reenrollmentDate}
+                  onChange={(e) => setReenrollmentDate(e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
+                />
+                <p className="text-sm text-gray-600 mt-2">
+                  Select the date when the participant rejoined this program
+                </p>
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => {
+                    setShowReenrollConfirm(false);
+                    setProgramToReenroll(null);
+                  }}
+                  disabled={reenrolling}
+                  className="flex-1 px-6 py-4 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-xl text-lg font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReenrollInProgram}
+                  disabled={reenrolling}
+                  className="flex-1 px-6 py-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-xl text-lg font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {reenrolling ? 'Re-enrolling...' : 'Re-enroll'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reactivate Profile Confirmation Modal */}
+        {showReactivateConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border-4 border-green-400">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-3 bg-green-100 rounded-full">
+                  <UserCheck size={32} className="text-green-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900">Reactivate Profile</h3>
+              </div>
+
+              <p className="text-lg text-gray-700 mb-4">
+                Reactivate <span className="font-bold">{participant?.first_name} {participant?.last_name}</span>'s profile?
+              </p>
+
+              {enrolledPrograms.filter(p => p.is_active === false && p.withdrawal_reason === 'Profile deactivated').length > 0 && (
+                <div className="bg-blue-50 p-4 rounded-lg mb-4 border-2 border-blue-300">
+                  <p className="text-base font-semibold text-blue-900 mb-2">Programs that will be re-enrolled:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    {enrolledPrograms
+                      .filter(p => p.is_active === false && p.withdrawal_reason === 'Profile deactivated')
+                      .map(program => (
+                        <li key={program.id} className="text-base text-blue-800">{program.name}</li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="bg-yellow-50 p-4 rounded-lg mb-4 border-2 border-yellow-300">
+                <p className="text-base text-yellow-900 font-semibold mb-2">⚠️ Important - Please Review Before Confirming:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm text-yellow-800">
+                  <li>Review the list of programs above that will be re-enrolled</li>
+                  <li>Select the correct reactivation date below</li>
+                  <li>Once confirmed, this action will immediately reactivate the profile and all listed programs</li>
+                </ul>
+              </div>
+
+              <div className="bg-green-50 p-4 rounded-lg mb-4 border-2 border-green-200">
+                <p className="text-base text-green-900 font-semibold mb-2">✓ What will happen:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm text-green-800">
+                  <li>Profile will be marked as active</li>
+                  <li>All {enrolledPrograms.filter(p => p.is_active === false && p.withdrawal_reason === 'Profile deactivated').length} program(s) above will be automatically re-enrolled</li>
+                  <li>All historical data and attendance records remain preserved</li>
+                </ul>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-lg font-bold text-gray-900 mb-2">
+                  <span className="text-red-600">*</span> Reactivation Date (Required)
+                </label>
+                <input
+                  type="date"
+                  value={reactivationDate}
+                  onChange={(e) => setReactivationDate(e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
+                  required
+                />
+                <p className="text-sm text-gray-600 mt-2">
+                  Select the date when the participant returned and profile became active again
+                </p>
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => {
+                    setShowReactivateConfirm(false);
+                    setReactivationDate(new Date().toISOString().split('T')[0]);
+                  }}
+                  disabled={unenrolling}
+                  className="flex-1 px-6 py-4 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-xl text-lg font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReactivateProfile}
+                  disabled={unenrolling || !reactivationDate}
+                  className="flex-1 px-6 py-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-xl text-lg font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={!reactivationDate ? 'Please select a reactivation date' : ''}
+                >
+                  {unenrolling ? 'Reactivating...' : 'Confirm & Reactivate'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Inactive Profile Confirmation Modal */}
         {showUnenrollAllConfirm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1221,19 +1682,19 @@ export default function ParticipantProfile() {
               </div>
 
               <p className="text-lg text-gray-700 mb-6">
-                Are you sure you want to make <span className="font-bold">{participant?.first_name} {participant?.last_name}</span>'s profile inactive? This will unenroll them from <span className="font-bold">all {enrolledPrograms.length} program{enrolledPrograms.length !== 1 ? 's' : ''}</span>.
+                Are you sure you want to make <span className="font-bold">{participant?.first_name} {participant?.last_name}</span>'s profile inactive? This will unenroll them from <span className="font-bold">all {enrolledPrograms.filter(p => p.is_active !== false).length} program{enrolledPrograms.filter(p => p.is_active !== false).length !== 1 ? 's' : ''}</span>.
               </p>
 
               <div className="bg-orange-50 p-4 rounded-lg mb-6">
-                <p className="text-base font-semibold text-orange-800 mb-2">Programs to be unenrolled from:</p>
+                <p className="text-base font-semibold text-orange-800 mb-2">Active programs to be unenrolled from:</p>
                 <ul className="list-disc list-inside space-y-1">
-                  {enrolledPrograms.map(program => (
+                  {enrolledPrograms.filter(p => p.is_active !== false).map(program => (
                     <li key={program.id} className="text-base text-gray-700">{program.name}</li>
                   ))}
                 </ul>
               </div>
 
-              <div className="bg-blue-50 p-4 rounded-lg mb-6 border-2 border-blue-200">
+              <div className="bg-blue-50 p-4 rounded-lg mb-4 border-2 border-blue-200">
                 <p className="text-base text-blue-900 font-semibold mb-2">ℹ️ Important Information:</p>
                 <ul className="list-disc list-inside space-y-1 text-sm text-blue-800">
                   <li>Participant profile and data will be kept</li>
@@ -1241,6 +1702,22 @@ export default function ParticipantProfile() {
                   <li>Profile will be listed in "Inactive" section</li>
                   <li>Can be reactivated anytime by adding to programs</li>
                 </ul>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-lg font-bold text-gray-900 mb-2">
+                  Deactivation Date
+                </label>
+                <input
+                  type="date"
+                  value={deactivationDate}
+                  onChange={(e) => setDeactivationDate(e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                />
+                <p className="text-sm text-gray-600 mt-2">
+                  Select the date when the profile became inactive
+                </p>
               </div>
 
               <div className="flex gap-4">

@@ -277,23 +277,15 @@ export default function AddParticipantMultiStep() {
         }
 
         if (!data.healthConditions || data.healthConditions.length === 0) {
-          setError('Please select health conditions (or check none apply)');
+          setError('Please select at least one medical condition option');
           return false;
         }
         if (!data.regularExercise) {
           setError('Please indicate your regular exercise level');
           return false;
         }
-        if (!data.medicalProcedures) {
-          setError('Please provide information about medical procedures');
-          return false;
-        }
-        if (!data.medicalTreatmentAcknowledged) {
-          setError('Please acknowledge the medical treatment policy');
-          return false;
-        }
         if (!data.healthDeclarationSigned) {
-          setError('Please check the Health Declaration signed checkbox');
+          setError('Please check the Health Declaration Signed checkbox');
           return false;
         }
       }

@@ -1479,7 +1479,9 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
 
           <div className="bg-orange-50 p-6 rounded-xl border-2 border-orange-200">
             <h4 className="text-xl font-bold text-orange-900 mb-6">Fitness & Wellbeing Programs - Health Information</h4>
-            <p className="text-sm text-orange-700 mb-4">This information will apply to all selected fitness & wellbeing programs.</p>
+            <p className="text-sm text-orange-700 mb-4">
+              To ensure your safety and enjoyment of participating in your selected Hut program, it is important for us to know some key information to assist you appropriately. Please tick any medical conditions that are relevant to you at this time. We may ask some further questions to ensure your safety and comfort in participation.
+            </p>
 
             <div className="space-y-6">
               {(() => {
@@ -1490,19 +1492,28 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
                     {/* Health Conditions */}
                     <div>
                       <label className="block text-lg font-bold text-gray-700 mb-3">
-                        Health Info <span className="text-red-600">*</span>
+                        Medical Conditions <span className="text-red-600">*</span>
                       </label>
-                      <p className="text-sm text-gray-600 mb-3">Check boxes / drop down? Tick all that apply</p>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      <div className="space-y-3">
                         {[
-                          'Asthma', 'Back problems', 'Sight impairment', 'High blood pressure', 'Arthritis',
-                          'Joint replacement', 'Stroke', 'Epilepsy', 'Low blood pressure', 'Insomnia',
-                          'Heart issues', 'Menopause', 'Repetitive strain injury', 'Recent surgery', 'MS',
-                          'Diabetes', 'Recent fracture', 'Difficulty hearing', 'Hernia', 'Osteoporosis',
-                          'Detached Retina', 'Other'
+                          'Breathing problems eg. Asthma, shortness of breath',
+                          'Back or joint problems including arthritis, joint replacements',
+                          'Recent fracture or heightened risk of fracture eg. Osteoporosis',
+                          'Repetitive strain injury',
+                          'Sight impairment',
+                          'Difficulty hearing',
+                          'High or low blood pressure',
+                          'Heart issues',
+                          'Diabetes',
+                          'Epilepsy',
+                          'Stroke',
+                          'Neurological condition eg. MS, Parkinsons Disease',
+                          'Hernia',
+                          'Recent medical procedure or surgery in the last 12 months?',
+                          'Other condition for which you are currently experiencing or for which you have recently received treatment not listed above'
                         ].map(condition => (
-                          <label key={condition} className="flex items-center gap-2 cursor-pointer">
+                          <label key={condition} className="flex items-start gap-2 cursor-pointer">
                             <input
                               type="checkbox"
                               checked={(data.healthConditions || []).includes(condition)}
@@ -1513,7 +1524,7 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
                                   : current.filter((c: string) => c !== condition);
                                 onDataChange('fitness', 'healthConditions', updated);
                               }}
-                              className="w-5 h-5 rounded border-2 border-gray-300"
+                              className="w-5 h-5 mt-0.5 rounded border-2 border-gray-300"
                             />
                             <span className="text-gray-700">{condition}</span>
                           </label>
@@ -1521,22 +1532,54 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
                       </div>
                     </div>
 
+                    {/* Medication Information */}
+                    <div>
+                      <label className="block text-lg font-bold text-gray-700 mb-2">
+                        Are you taking any medications for any of these conditions?
+                      </label>
+                      <select
+                        value={data.takingMedications || ''}
+                        onChange={(e) => onDataChange('fitness', 'takingMedications', e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
+                      >
+                        <option value="">Select an option</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                      </select>
+                    </div>
+
+                    {/* Medication Effects - only show if taking medications */}
+                    {data.takingMedications === 'Yes' && (
+                      <div>
+                        <label className="block text-lg font-bold text-gray-700 mb-2">
+                          If yes, how does the medication effect you?
+                        </label>
+                        <textarea
+                          value={data.medicationEffects || ''}
+                          onChange={(e) => onDataChange('fitness', 'medicationEffects', e.target.value)}
+                          className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
+                          rows={3}
+                          placeholder="Please describe how the medication affects you"
+                        />
+                      </div>
+                    )}
+
                     {/* Exercise Level */}
                     <div>
                       <label className="block text-lg font-bold text-gray-700 mb-3">
-                        Regular Exercise <span className="text-red-600">*</span>
+                        Please comment on the type of regular exercise you are doing <span className="text-red-600">*</span>
                       </label>
                       <div className="space-y-2">
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="radio"
                             name="exercise-fitness"
-                            value="No regular exercise"
-                            checked={data.regularExercise === 'No regular exercise'}
+                            value="No reg exercise"
+                            checked={data.regularExercise === 'No reg exercise'}
                             onChange={(e) => onDataChange('fitness', 'regularExercise', e.target.value)}
                             className="w-5 h-5 border-2 border-gray-300"
                           />
-                          <span className="text-gray-700">No regular exercise</span>
+                          <span className="text-gray-700">No reg exercise</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
@@ -1553,54 +1596,13 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
                           <input
                             type="radio"
                             name="exercise-fitness"
-                            value="Do exercise regularly"
-                            checked={data.regularExercise === 'Do exercise regularly'}
+                            value="Reg.exercise"
+                            checked={data.regularExercise === 'Reg.exercise'}
                             onChange={(e) => onDataChange('fitness', 'regularExercise', e.target.value)}
                             className="w-5 h-5 border-2 border-gray-300"
                           />
-                          <span className="text-gray-700">Do exercise regularly</span>
+                          <span className="text-gray-700">Reg.exercise</span>
                         </label>
-                      </div>
-                    </div>
-
-                    {/* Medical Procedures */}
-                    <div>
-                      <label className="block text-lg font-bold text-gray-700 mb-2">
-                        Medical procedures in the last 12 months? <span className="text-red-600">*</span>
-                      </label>
-                      <textarea
-                        value={data.medicalProcedures || ''}
-                        onChange={(e) => onDataChange('fitness', 'medicalProcedures', e.target.value)}
-                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
-                        rows={3}
-                        placeholder="Please describe any medical procedures"
-                      />
-                    </div>
-
-                    {/* Acknowledgement */}
-                    <div className="bg-red-50 p-4 rounded-lg border-2 border-red-200">
-                      <label className="flex items-start gap-3 cursor-pointer mb-3">
-                        <input
-                          type="checkbox"
-                          checked={data.medicalTreatmentAcknowledged || false}
-                          onChange={(e) => onDataChange('fitness', 'medicalTreatmentAcknowledged', e.target.checked)}
-                          className="w-6 h-6 mt-1 rounded border-2 border-gray-300"
-                        />
-                        <span className="text-lg font-semibold text-gray-700">
-                          Acknowledgement we will call for medical treatment if required <span className="text-red-600">*</span>
-                        </span>
-                      </label>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-600 mb-1">
-                          Date
-                        </label>
-                        <input
-                          type="date"
-                          value={data.medicalTreatmentAcknowledgedDate || ''}
-                          onChange={(e) => onDataChange('fitness', 'medicalTreatmentAcknowledgedDate', e.target.value)}
-                          className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                        />
                       </div>
                     </div>
 
@@ -1614,7 +1616,7 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
                           className="w-6 h-6 mt-1 rounded border-2 border-gray-300"
                         />
                         <span className="text-lg font-semibold text-gray-700">
-                          Health Declaration signed <span className="text-red-600">*</span>
+                          Health Declaration Signed <span className="text-red-600">*</span>
                         </span>
                       </label>
 
@@ -1634,31 +1636,32 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
                     {/* Medical Form Received */}
                     <div>
                       <label className="block text-lg font-bold text-gray-700 mb-2">
-                        Medical Form Received?
+                        Medical Form Received? (to be completed by a Medical Practitioner)
                       </label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <select
-                            value={data.medicalFormReceived || ''}
-                            onChange={(e) => onDataChange('fitness', 'medicalFormReceived', e.target.value)}
-                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
-                          >
-                            <option value="">Select an option</option>
-                            <option value="Yes">Yes</option>
-                            <option value="No">No</option>
-                            <option value="n/a">n/a</option>
-                          </select>
-                        </div>
-                        <div>
-                          <input
-                            type="text"
-                            value={data.medicalFormReceivedNotes || ''}
-                            onChange={(e) => onDataChange('fitness', 'medicalFormReceivedNotes', e.target.value)}
-                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
-                            placeholder="Notes (optional)"
-                          />
-                        </div>
-                      </div>
+                      <select
+                        value={data.medicalFormReceived || ''}
+                        onChange={(e) => onDataChange('fitness', 'medicalFormReceived', e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
+                      >
+                        <option value="">Select an option</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                        <option value="N/A">N/A</option>
+                      </select>
+                    </div>
+
+                    {/* Free Form Notes */}
+                    <div>
+                      <label className="block text-lg font-bold text-gray-700 mb-2">
+                        Additional Notes
+                      </label>
+                      <textarea
+                        value={data.freeFormNotes || ''}
+                        onChange={(e) => onDataChange('fitness', 'freeFormNotes', e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
+                        rows={4}
+                        placeholder="Any additional information or notes"
+                      />
                     </div>
                   </>
                 );

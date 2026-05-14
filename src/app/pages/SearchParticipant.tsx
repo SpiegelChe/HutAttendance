@@ -36,13 +36,14 @@ export default function SearchParticipant() {
 
       if (error) throw error;
 
-      // Fetch enrollment counts for each participant
+      // Fetch ACTIVE enrollment counts for each participant
       const participantsWithCounts = await Promise.all(
         (data || []).map(async (participant) => {
           const { count } = await supabase
             .from('program_enrollments')
             .select('*', { count: 'exact', head: true })
-            .eq('participant_id', participant.id);
+            .eq('participant_id', participant.id)
+            .eq('is_active', true);
 
           return {
             ...participant,

@@ -65,11 +65,7 @@ function RootRedirect() {
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-  
-  if (user?.role === 'staff') {
-    return <Navigate to="/volunteer-dashboard" replace />;
-  }
-  
+
   return <Navigate to="/dashboard" replace />;
 }
 
@@ -89,12 +85,9 @@ function LoginRoute() {
   }
   
   if (isAuthenticated) {
-    if (user?.role === 'staff') {
-      return <Navigate to="/volunteer-dashboard" replace />;
-    }
     return <Navigate to="/dashboard" replace />;
   }
-  
+
   return <Login />;
 }
 
