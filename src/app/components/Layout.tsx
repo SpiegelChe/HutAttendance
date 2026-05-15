@@ -177,7 +177,7 @@ export function Layout({
   const menuItems = getFilteredMenuItems();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 print:bg-white">
       {/* Header */}
       <header className="bg-gradient-to-r from-blue-600 to-blue-700 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -367,7 +367,7 @@ export function Layout({
           className={`flex-1 ${!isDashboard && showSidebar ? "lg:ml-0" : ""} max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full`}
         >
           {title && (
-            <div className="mb-8">
+            <div className="mb-8 print:hidden">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
                 {title}
               </h2>

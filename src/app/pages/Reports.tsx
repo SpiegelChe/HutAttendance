@@ -8,14 +8,7 @@ import {
   Participant,
   AttendanceRecord,
 } from "../../lib/supabase";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  Legend,
-} from "recharts";
+import { PieChart, Pie, Cell, Tooltip } from "recharts";
 import { ADELAIDE_HILLS_TOWNSHIPS } from "../utils/constants";
 import logo from "figma:asset/c717e59cf8f32fe25477e30d5de63135f3057cc8.png";
 
@@ -621,6 +614,36 @@ export default function Reports() {
     "#EC4899",
   ];
 
+  const renderCenteredPieChart = (
+    data: { name: string; value: number }[],
+  ) => (
+    <div className="flex h-[270px] w-full items-center justify-center overflow-visible">
+      <PieChart width={410} height={275}>
+        <Pie
+          data={data}
+          cx={205}
+          cy={132}
+          labelLine={false}
+          label={({ name, percent }) =>
+            `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`
+          }
+          outerRadius={92}
+          fill="#8884d8"
+          dataKey="value"
+          isAnimationActive={false}
+        >
+          {data.map((entry, index) => (
+            <Cell
+              key={`cell-${index}`}
+              fill={COLORS[index % COLORS.length]}
+            />
+          ))}
+        </Pie>
+        <Tooltip />
+      </PieChart>
+    </div>
+  );
+
   return (
     <Layout title="View Reports">
       <div className="mx-auto max-w-[1800px]">
@@ -1040,10 +1063,10 @@ export default function Reports() {
         {showPreview && (
           <div
             ref={reportRef}
-            className="bg-white rounded-2xl shadow-lg p-8 mb-8"
+            className="bg-white rounded-2xl shadow-lg p-8 mb-8 print:shadow-none print:p-4"
           >
             {/* Report Header */}
-            <div className="mb-8 border-b-2 border-gray-200 pb-6">
+            <div className="mb-6 border-b-2 border-gray-200 pb-4 print:mb-4 print:pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
                   <img
@@ -1082,8 +1105,8 @@ export default function Reports() {
             </div>
 
             {/* Key Metrics */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-              <div className="bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-xl p-6 shadow-lg">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6 print:mb-4">
+              <div className="bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-xl p-6 shadow-lg print:bg-teal-600 print:shadow-none">
                 <div className="text-sm font-semibold mb-2">
                   Unique Participants
                 </div>
@@ -1091,7 +1114,7 @@ export default function Reports() {
                   {reportData.uniqueParticipants}
                 </div>
               </div>
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl p-6 shadow-lg">
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl p-6 shadow-lg print:bg-blue-600 print:shadow-none">
                 <div className="text-sm font-semibold mb-2">
                   Total Attendances
                 </div>
@@ -1099,7 +1122,7 @@ export default function Reports() {
                   {reportData.totalAttendances}
                 </div>
               </div>
-              <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-xl p-6 shadow-lg">
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-xl p-6 shadow-lg print:bg-purple-600 print:shadow-none">
                 <div className="text-sm font-semibold mb-2">
                   Total Records
                 </div>
@@ -1107,7 +1130,7 @@ export default function Reports() {
                   {reportData.totalRecords}
                 </div>
               </div>
-              <div className="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-xl p-6 shadow-lg">
+              <div className="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-xl p-6 shadow-lg print:bg-green-600 print:shadow-none">
                 <div className="text-sm font-semibold mb-2">
                   Attendance Rate
                 </div>
@@ -1118,44 +1141,16 @@ export default function Reports() {
             </div>
 
             {/* Charts */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 print:mb-4 print:gap-4">
               {/* Age Distribution */}
-              <div className="border border-gray-200 rounded-xl p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">
+              <div className="border border-gray-200 rounded-xl p-4 print:p-3 print:border-gray-300">
+                <h3 className="text-xl font-bold text-gray-900 mb-3 print:mb-2 print:text-lg text-left pl-2">
                   Age Distribution
                 </h3>
                 {reportData.ageDistribution.length > 0 ? (
-                  <ResponsiveContainer
-                    width="100%"
-                    height={300}
-                  >
-                    <PieChart>
-                      <Pie
-                        data={reportData.ageDistribution}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) =>
-                          `${name}: ${(percent * 100).toFixed(0)}%`
-                        }
-                        outerRadius={100}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {reportData.ageDistribution.map(
-                          (entry, index) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={
-                                COLORS[index % COLORS.length]
-                              }
-                            />
-                          ),
-                        )}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  renderCenteredPieChart(
+                    reportData.ageDistribution,
+                  )
                 ) : (
                   <div className="text-center text-gray-500 py-8">
                     No data available
@@ -1164,42 +1159,14 @@ export default function Reports() {
               </div>
 
               {/* Gender Distribution */}
-              <div className="border border-gray-200 rounded-xl p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">
+              <div className="border border-gray-200 rounded-xl p-4 print:p-3 print:border-gray-300">
+                <h3 className="text-xl font-bold text-gray-900 mb-3 print:mb-2 print:text-lg text-left pl-2">
                   Gender Distribution
                 </h3>
                 {reportData.genderDistribution.length > 0 ? (
-                  <ResponsiveContainer
-                    width="100%"
-                    height={300}
-                  >
-                    <PieChart>
-                      <Pie
-                        data={reportData.genderDistribution}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) =>
-                          `${name}: ${(percent * 100).toFixed(0)}%`
-                        }
-                        outerRadius={100}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {reportData.genderDistribution.map(
-                          (entry, index) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={
-                                COLORS[index % COLORS.length]
-                              }
-                            />
-                          ),
-                        )}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  renderCenteredPieChart(
+                    reportData.genderDistribution,
+                  )
                 ) : (
                   <div className="text-center text-gray-500 py-8">
                     No data available
@@ -1209,7 +1176,7 @@ export default function Reports() {
             </div>
 
             {/* Program Data Table */}
-            <div className="border border-gray-200 rounded-xl p-6">
+            <div className="border border-gray-200 rounded-xl p-6 print:p-4 print:border-gray-300 print:break-before-page">
               <h3 className="text-xl font-bold text-gray-900 mb-4">
                 Program Details
               </h3>
