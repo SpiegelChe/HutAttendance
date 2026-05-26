@@ -182,12 +182,13 @@ export function GeneralInfoStep({ formData, handleChange }: GeneralInfoStepProps
             <option value="">Select gender</option>
             <option value="Female">Female</option>
             <option value="Male">Male</option>
-            <option value="I use a different term">I use a different term</option>
+            <option value="I prefer something different">I prefer something different</option>
+            <option value="Prefer not to say">Prefer not to say</option>
           </select>
         </div>
 
         {/* Conditional Gender Other Input */}
-        {formData.gender === 'I use a different term' && (
+        {formData.gender === 'I prefer something different' && (
           <div className="mt-4">
             <label className="block text-lg font-bold text-gray-700 mb-2">
               Please specify <span className="text-red-600">*</span>
@@ -453,13 +454,29 @@ export function GeneralInfoStep({ formData, handleChange }: GeneralInfoStepProps
             <label className="block text-lg font-bold text-gray-700 mb-2">
               Relationship
             </label>
-            <input
-              type="text"
+            <select
               value={formData.emergencyContactRelationship}
               onChange={(e) => handleChange('emergencyContactRelationship', e.target.value)}
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
-              placeholder="e.g., Spouse, Parent, Friend"
-            />
+            >
+              <option value="">Select relationship</option>
+              <option value="Spouse/Partner">Spouse/Partner</option>
+              <option value="Son">Son</option>
+              <option value="Daughter">Daughter</option>
+              <option value="Friend">Friend</option>
+              <option value="Relative">Relative</option>
+              <option value="Neighbour">Neighbour</option>
+              <option value="Other">Other</option>
+            </select>
+            {formData.emergencyContactRelationship === 'Other' && (
+              <input
+                type="text"
+                value={formData.emergencyContactRelationshipOther || ''}
+                onChange={(e) => handleChange('emergencyContactRelationshipOther', e.target.value)}
+                className="w-full mt-3 px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
+                placeholder="Please specify relationship"
+              />
+            )}
           </div>
 
           <div className="md:col-span-2">
@@ -575,21 +592,6 @@ export function GeneralInfoStep({ formData, handleChange }: GeneralInfoStepProps
             </div>
           )}
 
-          <div>
-            <label className="block text-lg font-bold text-gray-700 mb-2">
-              Are you accessing this service as a member of the LGBTI+ community?
-            </label>
-            <select
-              value={formData.lgbtiCommunity}
-              onChange={(e) => handleChange('lgbtiCommunity', e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
-            >
-              <option value="">Select an option</option>
-              <option value="No">No</option>
-              <option value="Yes">Yes</option>
-              <option value="Prefer not to say">Prefer not to say</option>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -644,30 +646,7 @@ export function GeneralInfoStep({ formData, handleChange }: GeneralInfoStepProps
       <div className="bg-orange-50 p-6 rounded-xl border-2 border-orange-200">
         <h4 className="text-xl font-bold text-orange-900 mb-4">How did you hear about us?</h4>
 
-        {/* Check All */}
-        <label className="flex items-center gap-3 cursor-pointer bg-orange-100 p-3 rounded-lg border-2 border-orange-300 mb-4">
-          <input
-            type="checkbox"
-            checked={formData.referralBrochure && formData.referralReferral && formData.referralEmailFromHut &&
-                     formData.referralFamilyFriend && formData.referralSocialMedia && formData.referralLocalNewspaper &&
-                     formData.referralLocalNoticeboard && formData.referralWeb}
-            onChange={(e) => {
-              const checked = e.target.checked;
-              handleChange('referralBrochure', checked);
-              handleChange('referralReferral', checked);
-              handleChange('referralEmailFromHut', checked);
-              handleChange('referralFamilyFriend', checked);
-              handleChange('referralSocialMedia', checked);
-              handleChange('referralLocalNewspaper', checked);
-              handleChange('referralLocalNoticeboard', checked);
-              handleChange('referralWeb', checked);
-            }}
-            className="w-6 h-6 rounded border-2 border-gray-300"
-          />
-          <span className="text-lg font-bold text-orange-900">
-            Check All
-          </span>
-        </label>
+        <p className="text-base text-orange-800 italic mb-4">Select all that apply</p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="flex items-center gap-3 cursor-pointer">
@@ -1496,44 +1475,79 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
                       </label>
 
                       <div className="space-y-3">
-                        {[
-                          'Breathing problems eg. Asthma, shortness of breath',
-                          'Back or joint problems including arthritis, joint replacements',
-                          'Recent fracture or heightened risk of fracture eg. Osteoporosis',
-                          'Repetitive strain injury',
-                          'Sight impairment',
-                          'Difficulty hearing',
-                          'High or low blood pressure',
-                          'Heart issues',
-                          'Diabetes',
-                          'Epilepsy',
-                          'Stroke',
-                          'Neurological condition eg. MS, Parkinsons Disease',
-                          'Hernia',
-                          'Recent medical procedure or surgery in the last 12 months?',
-                          'Other condition for which you are currently experiencing or for which you have recently received treatment not listed above'
-                        ].map(condition => (
-                          <label key={condition} className="flex items-start gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={(data.healthConditions || []).includes(condition)}
-                              onChange={(e) => {
-                                const current = data.healthConditions || [];
-                                const updated = e.target.checked
-                                  ? [...current, condition]
-                                  : current.filter((c: string) => c !== condition);
-                                onDataChange('fitness', 'healthConditions', updated);
-                              }}
-                              className="w-5 h-5 mt-0.5 rounded border-2 border-gray-300"
-                            />
-                            <span className="text-gray-700">{condition}</span>
-                          </label>
-                        ))}
+                        {/* None option */}
+                        <label className="flex items-start gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={(data.healthConditions || []).includes('None')}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                onDataChange('fitness', 'healthConditions', ['None']);
+                                onDataChange('fitness', 'otherConditionDetails', '');
+                              } else {
+                                onDataChange('fitness', 'healthConditions', []);
+                              }
+                            }}
+                            className="w-5 h-5 mt-0.5 rounded border-2 border-gray-300"
+                          />
+                          <span className="text-gray-700 font-semibold">None</span>
+                        </label>
+
+                        {(() => {
+                          const noneSelected = (data.healthConditions || []).includes('None');
+                          return [
+                            'Breathing problems eg. Asthma, shortness of breath',
+                            'Back or joint problems including arthritis, joint replacements',
+                            'Recent fracture or heightened risk of fracture eg. Osteoporosis',
+                            'Repetitive strain injury',
+                            'Sight impairment',
+                            'Difficulty hearing',
+                            'High or low blood pressure',
+                            'Heart issues',
+                            'Diabetes',
+                            'Epilepsy',
+                            'Stroke',
+                            'Neurological condition eg. MS, Parkinsons Disease',
+                            'Hernia',
+                            'Recent medical procedure or surgery in the last 12 months?',
+                            'Other'
+                          ].map(condition => (
+                            <label key={condition} className={`flex items-start gap-2 ${noneSelected ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`}>
+                              <input
+                                type="checkbox"
+                                disabled={noneSelected}
+                                checked={(data.healthConditions || []).includes(condition)}
+                                onChange={(e) => {
+                                  const current = (data.healthConditions || []).filter((c: string) => c !== 'None');
+                                  const updated = e.target.checked
+                                    ? [...current, condition]
+                                    : current.filter((c: string) => c !== condition);
+                                  onDataChange('fitness', 'healthConditions', updated);
+                                  if (condition === 'Other' && !e.target.checked) {
+                                    onDataChange('fitness', 'otherConditionDetails', '');
+                                  }
+                                }}
+                                className="w-5 h-5 mt-0.5 rounded border-2 border-gray-300"
+                              />
+                              <span className="text-gray-700">{condition}</span>
+                            </label>
+                          ));
+                        })()}
+
+                        {(data.healthConditions || []).includes('Other') && (
+                          <textarea
+                            value={data.otherConditionDetails || ''}
+                            onChange={(e) => onDataChange('fitness', 'otherConditionDetails', e.target.value)}
+                            className="w-full mt-1 px-4 py-3 border-2 border-gray-300 rounded-lg text-base focus:border-blue-500 focus:outline-none"
+                            rows={3}
+                            placeholder="Please describe your condition"
+                          />
+                        )}
                       </div>
                     </div>
 
                     {/* Medication Information */}
-                    <div>
+                    <div className={(data.healthConditions || []).includes('None') ? 'opacity-40 pointer-events-none' : ''}>
                       <label className="block text-lg font-bold text-gray-700 mb-2">
                         Are you taking any medications for any of these conditions?
                       </label>
@@ -1613,7 +1627,7 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
                           type="checkbox"
                           checked={data.healthDeclarationSigned || false}
                           onChange={(e) => onDataChange('fitness', 'healthDeclarationSigned', e.target.checked)}
-                          className="w-6 h-6 mt-1 rounded border-2 border-gray-300"
+                          className="w-5 h-5 mt-0.5 rounded border-2 border-gray-300"
                         />
                         <span className="text-lg font-semibold text-gray-700">
                           Health Declaration Signed <span className="text-red-600">*</span>

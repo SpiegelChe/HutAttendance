@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { supabase } from '../../lib/supabase';
-import { Plus, Edit2, Trash2, Users, Clock, Calendar } from 'lucide-react';
+import { Plus, Edit2, Trash2, Users, Clock, Calendar, UserCheck } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface Program {
   id: string;
@@ -41,7 +42,22 @@ interface ProgramWithEnrollment extends Program {
   enrollment_count?: number;
 }
 
+interface ProgramParticipant {
+  id: string;
+  participant_id: string;
+  enrolled_at: string;
+  participants?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    phone: string;
+    email?: string;
+    is_active: boolean;
+  };
+}
+
 export default function Programs() {
+  const { user } = useAuth();
   const [programs, setPrograms] = useState<ProgramWithEnrollment[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [programStaff, setProgramStaff] = useState<Record<string, ProgramStaff[]>>({});
@@ -50,7 +66,10 @@ export default function Programs() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showStaffModal, setShowStaffModal] = useState(false);
+  const [showParticipantsModal, setShowParticipantsModal] = useState(false);
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
+  const [programParticipants, setProgramParticipants] = useState<ProgramParticipant[]>([]);
+  const [participantsLoading, setParticipantsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -168,6 +187,37 @@ export default function Programs() {
     } catch (err) {
       console.error('Error fetching users:', err);
       setError('Failed to fetch users. Please try again later.');
+    }
+  };
+
+  const fetchProgramParticipants = async (programId: string) => {
+    setParticipantsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('program_enrollments')
+        .select(`
+          id,
+          participant_id,
+          enrolled_at,
+          participants:participant_id (
+            id,
+            first_name,
+            last_name,
+            phone,
+            email,
+            is_active
+          )
+        `)
+        .eq('program_id', programId)
+        .order('enrolled_at', { ascending: false });
+
+      if (error) throw error;
+      setProgramParticipants(data || []);
+    } catch (err) {
+      console.error('Error fetching program participants:', err);
+      alert('Failed to fetch participants. Please try again.');
+    } finally {
+      setParticipantsLoading(false);
     }
   };
 
@@ -422,6 +472,12 @@ export default function Programs() {
     setShowStaffModal(true);
   };
 
+  const openParticipantsModal = (program: Program) => {
+    setSelectedProgram(program);
+    setShowParticipantsModal(true);
+    fetchProgramParticipants(program.id);
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -651,7 +707,7 @@ export default function Programs() {
                         </div>
                       </div>
 
-                      <div className="pt-3 border-t-2 border-gray-200">
+                      <div className="pt-3 border-t-2 border-gray-200 space-y-2">
                         <button
                           onClick={() => openStaffModal(program)}
                           className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg font-bold transition-colors"
@@ -659,6 +715,15 @@ export default function Programs() {
                           <Users size={18} />
                           Manage Staff ({(programStaff[program.id] || []).length})
                         </button>
+                        {(user?.role === 'admin' || user?.role === 'manager') && (
+                          <button
+                            onClick={() => openParticipantsModal(program)}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg font-bold transition-colors"
+                          >
+                            <UserCheck size={18} />
+                            View Participants ({program.enrollment_count || 0})
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1224,6 +1289,103 @@ export default function Programs() {
                   onClick={() => {
                     setShowStaffModal(false);
                     setSelectedProgram(null);
+                  }}
+                  className="w-full px-6 py-4 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-xl text-xl font-bold transition-all"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* View Participants Modal */}
+        {showParticipantsModal && selectedProgram && (
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 px-4">
+            <div className="bg-white rounded-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+              <h3 className="text-3xl font-bold text-gray-900 mb-2">Program Participants</h3>
+              <p className="text-xl text-gray-600 mb-6">{selectedProgram.name}</p>
+
+              {participantsLoading ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-lg text-gray-600">Loading participants...</p>
+                  </div>
+                </div>
+              ) : programParticipants.length === 0 ? (
+                <div className="bg-gray-50 p-8 rounded-lg border-2 border-gray-200 text-center">
+                  <UserCheck size={48} className="mx-auto text-gray-400 mb-4" />
+                  <p className="text-xl text-gray-600 font-bold mb-2">No Participants Yet</p>
+                  <p className="text-base text-gray-500">No participants have enrolled in this program.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200 mb-4">
+                    <p className="text-lg font-bold text-blue-900">
+                      Total Participants: {programParticipants.length} / {selectedProgram.capacity}
+                    </p>
+                  </div>
+
+                  {/* Participants Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-2 border-gray-200">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-base font-bold text-gray-900 border-b-2 border-gray-200">Name</th>
+                          <th className="px-4 py-3 text-left text-base font-bold text-gray-900 border-b-2 border-gray-200">Phone</th>
+                          <th className="px-4 py-3 text-left text-base font-bold text-gray-900 border-b-2 border-gray-200">Email</th>
+                          <th className="px-4 py-3 text-left text-base font-bold text-gray-900 border-b-2 border-gray-200">Status</th>
+                          <th className="px-4 py-3 text-left text-base font-bold text-gray-900 border-b-2 border-gray-200">Enrolled</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {programParticipants.map((enrollment) => {
+                          const participant = enrollment.participants;
+                          if (!participant) return null;
+
+                          return (
+                            <tr key={enrollment.id} className="border-b border-gray-200 hover:bg-gray-50">
+                              <td className="px-4 py-3 text-base text-gray-900">
+                                <span className="font-bold">
+                                  {participant.first_name} {participant.last_name}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-base text-gray-700">{participant.phone || 'N/A'}</td>
+                              <td className="px-4 py-3 text-base text-gray-700">{participant.email || 'N/A'}</td>
+                              <td className="px-4 py-3">
+                                {participant.is_active ? (
+                                  <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-bold">
+                                    Active
+                                  </span>
+                                ) : (
+                                  <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm font-bold">
+                                    Inactive
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-base text-gray-700">
+                                {new Date(enrollment.enrolled_at).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric'
+                                })}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-8">
+                <button
+                  onClick={() => {
+                    setShowParticipantsModal(false);
+                    setSelectedProgram(null);
+                    setProgramParticipants([]);
                   }}
                   className="w-full px-6 py-4 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-xl text-xl font-bold transition-all"
                 >

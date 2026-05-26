@@ -345,7 +345,7 @@ export default function ParticipantProfile() {
         .from('participants')
         .update({
           is_active: true,
-          reactivated_at: reactivationDateTime
+          deactivated_at: null
         })
         .eq('id', id);
 
@@ -460,6 +460,62 @@ export default function ParticipantProfile() {
   return (
     <Layout title="Participant Profile">
       <div className="max-w-5xl mx-auto">
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-8">
+          <button
+            onClick={() => navigate('/search')}
+            className="flex items-center justify-center gap-3 px-8 py-5 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-xl"
+          >
+            <ArrowLeft size={24} />
+            Back to Search
+          </button>
+
+          {user?.role === 'admin' && (
+            <>
+              <button
+                onClick={handleEdit}
+                className="flex items-center justify-center gap-3 px-8 py-5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-xl"
+              >
+                <Edit size={24} />
+                Edit Details
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex items-center justify-center gap-3 px-8 py-5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-xl"
+              >
+                <Trash2 size={24} />
+                Delete
+              </button>
+            </>
+          )}
+
+          {enrolledPrograms.filter(p => p.is_active === false && p.withdrawal_reason === 'Profile deactivated').length > 0 ? (
+            <button
+              onClick={() => setShowReactivateConfirm(true)}
+              className="flex-1 px-8 py-5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-xl"
+            >
+              Reactivate Profile & Re-enroll Programs
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate('/add-to-program')}
+              className="flex-1 px-8 py-5 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-xl"
+            >
+              Add to Program
+            </button>
+          )}
+
+          {enrolledPrograms.filter(p => p.is_active !== false).length > 0 && (
+            <button
+              onClick={() => setShowUnenrollAllConfirm(true)}
+              className="flex items-center justify-center gap-3 px-8 py-5 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-xl"
+            >
+              <LogOut size={24} />
+              Inactive Profile
+            </button>
+          )}
+        </div>
+
         {/* Header Card */}
         <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl shadow-2xl p-10 mb-8 text-white">
           <div className="flex items-center gap-6 mb-4">
@@ -622,7 +678,7 @@ export default function ParticipantProfile() {
         </div>
 
         {/* Cultural Background */}
-        {(participant.identify_aboriginal_tsi || participant.country_of_birth || participant.speak_other_language || participant.cultural_identity || participant.lgbti_community) && (
+        {(participant.identify_aboriginal_tsi || participant.country_of_birth || participant.speak_other_language || participant.cultural_identity) && (
           <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 border-4 border-yellow-200">
             <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
               <Users className="text-yellow-600" size={32} />
@@ -657,12 +713,6 @@ export default function ParticipantProfile() {
                   {participant.cultural_identity_details && (
                     <p className="text-base text-gray-700 mt-2">{participant.cultural_identity_details}</p>
                   )}
-                </div>
-              )}
-              {participant.lgbti_community && (
-                <div className="bg-yellow-50 p-6 rounded-xl">
-                  <p className="text-lg font-bold text-gray-700 mb-2">LGBTI+ Community Member</p>
-                  <p className="text-xl text-gray-900">{participant.lgbti_community}</p>
                 </div>
               )}
             </div>
@@ -1368,63 +1418,6 @@ export default function ParticipantProfile() {
               })}
               </div>
             </>
-          )}
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <button
-            onClick={() => navigate('/search')}
-            className="flex items-center justify-center gap-3 px-8 py-5 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-xl"
-          >
-            <ArrowLeft size={24} />
-            Back to Search
-          </button>
-
-          {user?.role === 'admin' && (
-            <>
-              <button
-                onClick={handleEdit}
-                className="flex items-center justify-center gap-3 px-8 py-5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-xl"
-              >
-                <Edit size={24} />
-                Edit Details
-              </button>
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="flex items-center justify-center gap-3 px-8 py-5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-xl"
-              >
-                <Trash2 size={24} />
-                Delete
-              </button>
-            </>
-          )}
-
-          {/* Show Reactivate button only if there are inactive programs from deactivation */}
-          {enrolledPrograms.filter(p => p.is_active === false && p.withdrawal_reason === 'Profile deactivated').length > 0 ? (
-            <button
-              onClick={() => setShowReactivateConfirm(true)}
-              className="flex-1 px-8 py-5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-xl"
-            >
-              Reactivate Profile & Re-enroll Programs
-            </button>
-          ) : (
-            <button
-              onClick={() => navigate('/add-to-program')}
-              className="flex-1 px-8 py-5 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-xl"
-            >
-              Add to Program
-            </button>
-          )}
-
-          {enrolledPrograms.filter(p => p.is_active !== false).length > 0 && (
-            <button
-              onClick={() => setShowUnenrollAllConfirm(true)}
-              className="flex items-center justify-center gap-3 px-8 py-5 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-xl"
-            >
-              <LogOut size={24} />
-              Inactive Profile
-            </button>
           )}
         </div>
 

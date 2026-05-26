@@ -153,6 +153,8 @@ CREATE TABLE IF NOT EXISTS participants (
   emergency_contact_name TEXT NOT NULL,
   emergency_contact_phone TEXT NOT NULL,
   additional_requirements TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  deactivated_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -183,14 +185,6 @@ BEGIN
     WHERE table_name = 'participants' AND column_name = 'title'
   ) THEN
     ALTER TABLE participants ADD COLUMN title TEXT;
-  END IF;
-
-  -- Add lgbti_community column
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'participants' AND column_name = 'lgbti_community'
-  ) THEN
-    ALTER TABLE participants ADD COLUMN lgbti_community TEXT;
   END IF;
 
   -- Add township column
@@ -324,10 +318,26 @@ BEGIN
 
   -- Add program specific data column (stored as JSON)
   IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns 
+    SELECT 1 FROM information_schema.columns
     WHERE table_name = 'participants' AND column_name = 'program_specific_data'
   ) THEN
     ALTER TABLE participants ADD COLUMN program_specific_data JSONB;
+  END IF;
+
+  -- Add is_active column for profile deactivation
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'participants' AND column_name = 'is_active'
+  ) THEN
+    ALTER TABLE participants ADD COLUMN is_active BOOLEAN DEFAULT TRUE;
+  END IF;
+
+  -- Add deactivated_at column for profile deactivation timestamp
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'participants' AND column_name = 'deactivated_at'
+  ) THEN
+    ALTER TABLE participants ADD COLUMN deactivated_at TIMESTAMP WITH TIME ZONE;
   END IF;
 END $$;
 
@@ -410,8 +420,33 @@ CREATE TABLE IF NOT EXISTS program_enrollments (
   participant_id UUID REFERENCES participants(id) ON DELETE CASCADE,
   program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
   enrolled_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  start_date TIMESTAMP WITH TIME ZONE,
+  end_date TIMESTAMP WITH TIME ZONE,
+  is_active BOOLEAN DEFAULT TRUE,
+  withdrawal_reason TEXT,
+  enrollment_data JSONB,
   UNIQUE(participant_id, program_id)
 );
+
+-- Add missing columns to program_enrollments if upgrading an existing database
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'program_enrollments' AND column_name = 'start_date') THEN
+    ALTER TABLE program_enrollments ADD COLUMN start_date TIMESTAMP WITH TIME ZONE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'program_enrollments' AND column_name = 'end_date') THEN
+    ALTER TABLE program_enrollments ADD COLUMN end_date TIMESTAMP WITH TIME ZONE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'program_enrollments' AND column_name = 'is_active') THEN
+    ALTER TABLE program_enrollments ADD COLUMN is_active BOOLEAN DEFAULT TRUE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'program_enrollments' AND column_name = 'withdrawal_reason') THEN
+    ALTER TABLE program_enrollments ADD COLUMN withdrawal_reason TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'program_enrollments' AND column_name = 'enrollment_data') THEN
+    ALTER TABLE program_enrollments ADD COLUMN enrollment_data JSONB;
+  END IF;
+END $$;
 
 -- Create attendance_records table
 CREATE TABLE IF NOT EXISTS attendance_records (
@@ -575,7 +610,16 @@ COMMENT ON TABLE participants IS 'Stores participant information';
 --
 -- For Fitness & Wellbeing Programs (Community Fun Fitness, Strength & Balance, Chi Kung, Walking Group, Men's Moves):
 -- { "fitness": {
---     healthConditions: [],  -- Array of health conditions
+--     healthConditions: [],  -- Array of selected medical conditions, or ["None"] if participant has no conditions.
+--                            -- Possible values: "None", "Breathing problems eg. Asthma, shortness of breath",
+--                            -- "Back or joint problems including arthritis, joint replacements",
+--                            -- "Recent fracture or heightened risk of fracture eg. Osteoporosis",
+--                            -- "Repetitive strain injury", "Sight impairment", "Difficulty hearing",
+--                            -- "High or low blood pressure", "Heart issues", "Diabetes", "Epilepsy",
+--                            -- "Stroke", "Neurological condition eg. MS, Parkinsons Disease", "Hernia",
+--                            -- "Recent medical procedure or surgery in the last 12 months?", "Other"
+--     otherConditionDetails: string,  -- Free-text description when "Other" is selected in healthConditions
+--     takingMedications: string,  -- "Yes" or "No" (skipped when healthConditions is ["None"])
 --     regularExercise: string,  -- Exercise level
 --     medicalProcedures: string,  -- Medical procedures in last 12 months
 --     medicalTreatmentAcknowledged: boolean,  -- Required acknowledgement
@@ -595,11 +639,10 @@ COMMENT ON COLUMN participants.postal_address_line2 IS 'Postal address line 2 (i
 COMMENT ON COLUMN participants.postal_postcode IS 'Postal postcode (if different from home postcode)';
 COMMENT ON COLUMN participants.home_tel IS 'Home telephone number (optional)';
 COMMENT ON COLUMN participants.title IS 'Participant title (Mr, Mrs, Ms, Miss, Dr, Other)';
-COMMENT ON COLUMN participants.lgbti_community IS 'LGBTI+ community member identification (Yes, No, Prefer not to say)';
 COMMENT ON COLUMN participants.receive_newsletter IS 'Whether participant wants to receive newsletters';
 COMMENT ON COLUMN participants.receive_course_notifications IS 'Whether participant wants to receive course/program notifications';
 COMMENT ON COLUMN participants.emergency_contact_address IS 'Emergency contact full address';
-COMMENT ON COLUMN participants.emergency_contact_relationship IS 'Relationship to emergency contact (e.g., spouse, parent)';
+COMMENT ON COLUMN participants.emergency_contact_relationship IS 'Relationship to emergency contact (Spouse/Partner, Son, Daughter, Friend, Relative, Neighbour, Other)';
 COMMENT ON COLUMN participants.identify_aboriginal_tsi IS 'Aboriginal or Torres Strait Islander identification';
 COMMENT ON COLUMN participants.speak_other_language IS 'Whether participant speaks a language other than English at home';
 COMMENT ON COLUMN participants.other_language_details IS 'Details of other languages spoken';

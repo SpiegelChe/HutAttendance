@@ -61,6 +61,7 @@ export default function EditParticipant() {
     emergencyContactAddress: '',
     emergencyContactPhone: '',
     emergencyContactRelationship: '',
+    emergencyContactRelationshipOther: '',
 
     // Cultural Background
     identifyAboriginalTSI: '',
@@ -205,7 +206,16 @@ export default function EditParticipant() {
           emergencyContactLastName: emergencyLastName,
           emergencyContactAddress: data.emergency_contact_address || '',
           emergencyContactPhone: data.emergency_contact_phone || '',
-          emergencyContactRelationship: data.emergency_contact_relationship || '',
+          emergencyContactRelationship: (() => {
+            const rel = data.emergency_contact_relationship || '';
+            const knownValues = ['Spouse/Partner', 'Son', 'Daughter', 'Friend', 'Relative', 'Neighbour', 'Other'];
+            return knownValues.includes(rel) ? rel : (rel ? 'Other' : '');
+          })(),
+          emergencyContactRelationshipOther: (() => {
+            const rel = data.emergency_contact_relationship || '';
+            const knownValues = ['Spouse/Partner', 'Son', 'Daughter', 'Friend', 'Relative', 'Neighbour', 'Other'];
+            return !knownValues.includes(rel) ? rel : '';
+          })(),
 
           identifyAboriginalTSI: data.identify_aboriginal_tsi || '',
           speakOtherLanguage: data.speak_other_language || '',
@@ -259,7 +269,7 @@ export default function EditParticipant() {
       setError('Gender is required');
       return false;
     }
-    if (formData.gender === 'I use a different term' && !formData.genderOther) {
+    if (formData.gender === 'I prefer something different' && !formData.genderOther) {
       setError('Please specify your gender identity');
       return false;
     }
@@ -323,7 +333,7 @@ export default function EditParticipant() {
       };
 
       // Determine final gender value
-      const finalGender = formData.gender === 'I use a different term'
+      const finalGender = formData.gender === 'I prefer something different'
         ? formData.genderOther
         : formData.gender;
 
@@ -351,14 +361,15 @@ export default function EditParticipant() {
         emergency_contact_name: `${formData.emergencyContactFirstName} ${formData.emergencyContactLastName}`,
         emergency_contact_phone: formData.emergencyContactPhone,
         emergency_contact_address: formData.emergencyContactAddress || null,
-        emergency_contact_relationship: formData.emergencyContactRelationship || null,
+        emergency_contact_relationship: formData.emergencyContactRelationship === 'Other'
+          ? (formData.emergencyContactRelationshipOther || null)
+          : (formData.emergencyContactRelationship || null),
         identify_aboriginal_tsi: formData.identifyAboriginalTSI || null,
         speak_other_language: formData.speakOtherLanguage || null,
         other_language_details: formData.otherLanguageDetails || null,
         country_of_birth: formData.countryOfBirth || null,
         cultural_identity: formData.culturalIdentity || null,
         cultural_identity_details: formData.culturalIdentityDetails || null,
-        lgbti_community: formData.lgbtiCommunity || null,
         referral_sources: JSON.stringify(referralSources),
         photo_consent: JSON.stringify(photoConsent),
         program_specific_data: JSON.stringify({
@@ -773,32 +784,104 @@ export default function EditParticipant() {
               <div className="space-y-4">
                 {/* Health Conditions */}
                 <div className="bg-white p-4 rounded-lg">
-                  <label className="block text-lg font-bold text-gray-700 mb-3">Health Conditions</label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {[
-                      'Asthma', 'Back problems', 'Sight impairment', 'High blood pressure', 'Arthritis',
-                      'Joint replacement', 'Stroke', 'Epilepsy', 'Low blood pressure', 'Insomnia',
-                      'Heart issues', 'Menopause', 'Repetitive strain injury', 'Recent surgery', 'MS',
-                      'Diabetes', 'Recent fracture', 'Difficulty hearing', 'Hernia', 'Osteoporosis',
-                      'Detached Retina', 'Other'
-                    ].map(condition => (
-                      <label key={condition} className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={(fitnessData.healthConditions || []).includes(condition)}
-                          onChange={(e) => {
-                            const current = fitnessData.healthConditions || [];
-                            const updated = e.target.checked
-                              ? [...current, condition]
-                              : current.filter((c: string) => c !== condition);
-                            setFitnessData({ ...fitnessData, healthConditions: updated });
-                          }}
-                          className="w-5 h-5 rounded border-2 border-gray-300"
-                        />
-                        <span className="text-gray-700">{condition}</span>
-                      </label>
-                    ))}
-                  </div>
+                  <label className="block text-lg font-bold text-gray-700 mb-3">Medical Conditions</label>
+
+                  {/* None option */}
+                  <label className="flex items-start gap-2 cursor-pointer mb-4">
+                    <input
+                      type="checkbox"
+                      checked={(fitnessData.healthConditions || []).includes('None')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFitnessData({ ...fitnessData, healthConditions: ['None'], otherConditionDetails: '', takingMedications: '' });
+                        } else {
+                          setFitnessData({ ...fitnessData, healthConditions: [] });
+                        }
+                      }}
+                      className="w-5 h-5 mt-0.5 rounded border-2 border-gray-300"
+                    />
+                    <span className="text-gray-700 font-semibold">None</span>
+                  </label>
+
+                  {(() => {
+                    const noneSelected = (fitnessData.healthConditions || []).includes('None');
+                    return (
+                      <>
+                        <div className={`space-y-3 ${noneSelected ? 'opacity-40 pointer-events-none' : ''}`}>
+                          {[
+                            'Breathing problems eg. Asthma, shortness of breath',
+                            'Back or joint problems including arthritis, joint replacements',
+                            'Recent fracture or heightened risk of fracture eg. Osteoporosis',
+                            'Repetitive strain injury',
+                            'Sight impairment',
+                            'Difficulty hearing',
+                            'High or low blood pressure',
+                            'Heart issues',
+                            'Diabetes',
+                            'Epilepsy',
+                            'Stroke',
+                            'Neurological condition eg. MS, Parkinsons Disease',
+                            'Hernia',
+                            'Recent medical procedure or surgery in the last 12 months?',
+                            'Other'
+                          ].map(condition => (
+                            <label key={condition} className="flex items-start gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={(fitnessData.healthConditions || []).includes(condition)}
+                                onChange={(e) => {
+                                  const current = (fitnessData.healthConditions || []).filter((c: string) => c !== 'None');
+                                  const updated = e.target.checked
+                                    ? [...current, condition]
+                                    : current.filter((c: string) => c !== condition);
+                                  const patch: any = { ...fitnessData, healthConditions: updated };
+                                  if (condition === 'Other' && !e.target.checked) patch.otherConditionDetails = '';
+                                  setFitnessData(patch);
+                                }}
+                                className="w-5 h-5 mt-0.5 rounded border-2 border-gray-300"
+                              />
+                              <span className="text-gray-700">{condition}</span>
+                            </label>
+                          ))}
+                        </div>
+
+                        {(fitnessData.healthConditions || []).includes('Other') && (
+                          <textarea
+                            value={fitnessData.otherConditionDetails || ''}
+                            onChange={(e) => setFitnessData({ ...fitnessData, otherConditionDetails: e.target.value })}
+                            className="w-full mt-3 px-4 py-3 border-2 border-gray-300 rounded-lg text-base focus:border-blue-500 focus:outline-none"
+                            rows={3}
+                            placeholder="Please describe your condition"
+                          />
+                        )}
+
+                        {/* Medication question — greyed out when None is selected */}
+                        <div className={`mt-4 ${noneSelected ? 'opacity-40 pointer-events-none' : ''}`}>
+                          <label className="block text-lg font-bold text-gray-700 mb-2">
+                            Are you taking any medications for any of these conditions?
+                          </label>
+                          <select
+                            value={fitnessData.takingMedications || ''}
+                            onChange={(e) => setFitnessData({ ...fitnessData, takingMedications: e.target.value })}
+                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
+                          >
+                            <option value="">Select an option</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                          </select>
+                          {fitnessData.takingMedications === 'Yes' && (
+                            <textarea
+                              value={fitnessData.medicationEffects || ''}
+                              onChange={(e) => setFitnessData({ ...fitnessData, medicationEffects: e.target.value })}
+                              className="w-full mt-3 px-4 py-3 border-2 border-gray-300 rounded-lg text-base focus:border-blue-500 focus:outline-none"
+                              rows={3}
+                              placeholder="How does the medication affect you?"
+                            />
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Regular Exercise */}
@@ -840,7 +923,7 @@ export default function EditParticipant() {
                       type="checkbox"
                       checked={fitnessData.medicalTreatmentAcknowledged || false}
                       onChange={(e) => setFitnessData({ ...fitnessData, medicalTreatmentAcknowledged: e.target.checked })}
-                      className="w-6 h-6 mt-1 rounded border-2 border-gray-300"
+                      className="w-5 h-5 mt-0.5 rounded border-2 border-gray-300"
                     />
                     <span className="text-lg font-semibold text-gray-700">
                       Acknowledgement we will call for medical treatment if required
@@ -855,6 +938,23 @@ export default function EditParticipant() {
                       className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
                     />
                   </div>
+                </div>
+
+                {/* Medical Form Received */}
+                <div className="bg-white p-4 rounded-lg">
+                  <label className="block text-lg font-bold text-gray-700 mb-2">
+                    Medical Form Received? (to be completed by a Medical Practitioner)
+                  </label>
+                  <select
+                    value={fitnessData.medicalFormReceived || ''}
+                    onChange={(e) => setFitnessData({ ...fitnessData, medicalFormReceived: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value="">Select an option</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                    <option value="N/A">N/A</option>
+                  </select>
                 </div>
               </div>
             </div>

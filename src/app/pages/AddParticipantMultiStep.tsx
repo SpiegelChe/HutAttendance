@@ -61,6 +61,7 @@ export default function AddParticipantMultiStep() {
     emergencyContactAddress: '',
     emergencyContactPhone: '',
     emergencyContactRelationship: '',
+    emergencyContactRelationshipOther: '',
     
     // Cultural Background
     identifyAboriginalTSI: '',
@@ -140,7 +141,7 @@ export default function AddParticipantMultiStep() {
         setError('Gender is required');
         return false;
       }
-      if (formData.gender === 'I use a different term' && !formData.genderOther) {
+      if (formData.gender === 'I prefer something different' && !formData.genderOther) {
         setError('Please specify your gender identity');
         return false;
       }
@@ -370,8 +371,8 @@ export default function AddParticipantMultiStep() {
       };
 
       // Determine final gender value
-      const finalGender = formData.gender === 'I use a different term' 
-        ? formData.genderOther 
+      const finalGender = formData.gender === 'I prefer something different'
+        ? formData.genderOther
         : formData.gender;
 
       // Insert participant - only include fields that exist in the database
@@ -407,14 +408,15 @@ export default function AddParticipantMultiStep() {
         receive_newsletter: formData.receiveNewsletter,
         receive_course_notifications: formData.receiveCourseNotifications,
         emergency_contact_address: formData.emergencyContactAddress || null,
-        emergency_contact_relationship: formData.emergencyContactRelationship || null,
+        emergency_contact_relationship: formData.emergencyContactRelationship === 'Other'
+          ? (formData.emergencyContactRelationshipOther || null)
+          : (formData.emergencyContactRelationship || null),
         identify_aboriginal_tsi: formData.identifyAboriginalTSI || null,
         speak_other_language: formData.speakOtherLanguage || null,
         other_language_details: formData.otherLanguageDetails || null,
         country_of_birth: formData.countryOfBirth || null,
         cultural_identity: formData.culturalIdentity || null,
         cultural_identity_details: formData.culturalIdentityDetails || null,
-        lgbti_community: formData.lgbtiCommunity || null,
         referral_sources: JSON.stringify(referralSources),
         photo_consent: JSON.stringify(photoConsent),
         program_specific_data: JSON.stringify(formData.programSpecificData)

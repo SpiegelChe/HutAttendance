@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Layout } from '../components/Layout';
-import { Search, UserCheck, Plus, AlertCircle } from 'lucide-react';
+import { Search, UserCheck, Plus, AlertCircle, User, Mail, Phone, MapPin, Calendar, Users } from 'lucide-react';
 import { supabase, Participant, Program, isSupabaseConfigured } from '../../lib/supabase';
 
 interface HealthInfo {
@@ -25,6 +25,9 @@ interface HealthInfo {
   hernia: boolean;
   osteoporosis: boolean;
   detachedRetina: boolean;
+  noneConditions: boolean;
+  other: boolean;
+  otherDetails: string;
   takingMedications: boolean;
   medicationEffects: string;
   exerciseLevel: 'none' | 'small' | 'regular' | '';
@@ -70,6 +73,9 @@ export default function AddToProgram() {
     hernia: false,
     osteoporosis: false,
     detachedRetina: false,
+    noneConditions: false,
+    other: false,
+    otherDetails: '',
     takingMedications: false,
     medicationEffects: '',
     exerciseLevel: '',
@@ -346,15 +352,101 @@ export default function AddToProgram() {
         </div>
 
         {/* Selected Participant & Program Selection */}
-        {selectedParticipant && (
+        {selectedParticipant && selectedParticipantData && (
           <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-8 mb-8 border-2 border-purple-300">
             <h3 className="text-2xl font-bold text-gray-900 mb-4">Selected Participant</h3>
-            <div className="bg-white rounded-xl p-6 mb-6">
-              <p className="text-xl font-bold text-gray-900">
-                {selectedParticipantData?.first_name} {selectedParticipantData?.last_name}
-              </p>
-              <p className="text-lg text-gray-600">{selectedParticipantData?.email}</p>
-              <p className="text-lg text-gray-600">{selectedParticipantData?.phone}</p>
+
+            {/* Profile Review Card */}
+            <div className="bg-white rounded-xl border-2 border-purple-200 mb-6 overflow-hidden">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-5 flex items-center gap-4">
+                <div className="bg-white p-3 rounded-full">
+                  <User size={36} className="text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white">
+                    {selectedParticipantData.first_name} {selectedParticipantData.last_name}
+                  </p>
+                  {selectedParticipantData.date_of_birth && (
+                    <p className="text-purple-200 text-base">
+                      DOB: {new Date(selectedParticipantData.date_of_birth).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Details Grid */}
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Contact */}
+                <div className="space-y-3">
+                  <h4 className="text-base font-bold text-purple-800 uppercase tracking-wide">Contact</h4>
+                  {selectedParticipantData.email && (
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Mail size={16} className="text-purple-500 flex-shrink-0" />
+                      <span className="text-base">{selectedParticipantData.email}</span>
+                    </div>
+                  )}
+                  {selectedParticipantData.phone && (
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Phone size={16} className="text-purple-500 flex-shrink-0" />
+                      <span className="text-base">{selectedParticipantData.phone}</span>
+                    </div>
+                  )}
+                  {(selectedParticipantData as any).home_tel && (
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Phone size={16} className="text-purple-500 flex-shrink-0" />
+                      <span className="text-base">{(selectedParticipantData as any).home_tel} (home)</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Address */}
+                <div className="space-y-3">
+                  <h4 className="text-base font-bold text-purple-800 uppercase tracking-wide">Address</h4>
+                  <div className="flex items-start gap-2 text-gray-700">
+                    <MapPin size={16} className="text-purple-500 flex-shrink-0 mt-0.5" />
+                    <span className="text-base">
+                      {selectedParticipantData.address_line1}
+                      {selectedParticipantData.address_line2 && `, ${selectedParticipantData.address_line2}`}
+                      {selectedParticipantData.post_code && `, ${selectedParticipantData.post_code}`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Emergency Contact */}
+                {selectedParticipantData.emergency_contact_name && (
+                  <div className="space-y-3">
+                    <h4 className="text-base font-bold text-purple-800 uppercase tracking-wide">Emergency Contact</h4>
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Users size={16} className="text-purple-500 flex-shrink-0" />
+                      <span className="text-base">{selectedParticipantData.emergency_contact_name}</span>
+                    </div>
+                    {selectedParticipantData.emergency_contact_phone && (
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <Phone size={16} className="text-purple-500 flex-shrink-0" />
+                        <span className="text-base">{selectedParticipantData.emergency_contact_phone}</span>
+                      </div>
+                    )}
+                    {(selectedParticipantData as any).emergency_contact_relationship && (
+                      <p className="text-sm text-gray-500 ml-6">{(selectedParticipantData as any).emergency_contact_relationship}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Additional Info */}
+                <div className="space-y-2">
+                  <h4 className="text-base font-bold text-purple-800 uppercase tracking-wide">Additional Info</h4>
+                  {(selectedParticipantData as any).council_region && (
+                    <p className="text-base text-gray-700">Council: {(selectedParticipantData as any).council_region}</p>
+                  )}
+                  {(selectedParticipantData as any).identify_aboriginal_tsi && (
+                    <p className="text-base text-gray-700">ATSI: {(selectedParticipantData as any).identify_aboriginal_tsi}</p>
+                  )}
+                  {(selectedParticipantData as any).country_of_birth && (
+                    <p className="text-base text-gray-700">Country of Birth: {(selectedParticipantData as any).country_of_birth}</p>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -413,22 +505,51 @@ export default function AddToProgram() {
                       <div className="space-y-6">
                         {/* Medical Conditions Checkboxes */}
                         <div className="bg-white rounded-lg p-6 border-2 border-orange-200">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <p className="text-base font-bold text-gray-700 mb-3">Medical Conditions</p>
+
+                          {/* None option */}
+                          <label className="flex items-start gap-3 cursor-pointer mb-4">
+                            <input
+                              type="checkbox"
+                              checked={healthInfo.noneConditions}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setHealthInfo(prev => ({
+                                    ...prev,
+                                    noneConditions: true,
+                                    asthma: false, sightImpairment: false, highBloodPressure: false,
+                                    arthritis: false, jointReplacement: false, stroke: false,
+                                    epilepsy: false, lowBloodPressure: false, insomnia: false,
+                                    heartIssues: false, menopause: false, repetitiveStrainInjury: false,
+                                    recentSurgery: false, ms: false, diabetes: false, recentFracture: false,
+                                    difficultyHearing: false, hernia: false, osteoporosis: false,
+                                    detachedRetina: false, other: false, otherDetails: ''
+                                  }));
+                                } else {
+                                  setHealthInfo(prev => ({ ...prev, noneConditions: false }));
+                                }
+                              }}
+                              className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
+                            />
+                            <span className="text-base font-semibold text-gray-800">None</span>
+                          </label>
+
+                          <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 ${healthInfo.noneConditions ? 'opacity-40 pointer-events-none' : ''}`}>
                             <label className="flex items-start gap-3 cursor-pointer">
                               <input
                                 type="checkbox"
                                 checked={healthInfo.asthma}
-                                onChange={(e) => setHealthInfo(prev => ({ ...prev, asthma: e.target.checked }))}
+                                onChange={(e) => setHealthInfo(prev => ({ ...prev, asthma: e.target.checked, noneConditions: false }))}
                                 className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
                               />
-                              <span className="text-base text-gray-800">Asthma, shortness of breath</span>
+                              <span className="text-base text-gray-800">Breathing problems eg. Asthma, shortness of breath</span>
                             </label>
 
                             <label className="flex items-start gap-3 cursor-pointer">
                               <input
                                 type="checkbox"
                                 checked={healthInfo.sightImpairment}
-                                onChange={(e) => setHealthInfo(prev => ({ ...prev, sightImpairment: e.target.checked }))}
+                                onChange={(e) => setHealthInfo(prev => ({ ...prev, sightImpairment: e.target.checked, noneConditions: false }))}
                                 className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
                               />
                               <span className="text-base text-gray-800">Sight impairment</span>
@@ -438,7 +559,7 @@ export default function AddToProgram() {
                               <input
                                 type="checkbox"
                                 checked={healthInfo.highBloodPressure}
-                                onChange={(e) => setHealthInfo(prev => ({ ...prev, highBloodPressure: e.target.checked }))}
+                                onChange={(e) => setHealthInfo(prev => ({ ...prev, highBloodPressure: e.target.checked, noneConditions: false }))}
                                 className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
                               />
                               <span className="text-base text-gray-800">High blood pressure</span>
@@ -448,27 +569,27 @@ export default function AddToProgram() {
                               <input
                                 type="checkbox"
                                 checked={healthInfo.arthritis}
-                                onChange={(e) => setHealthInfo(prev => ({ ...prev, arthritis: e.target.checked }))}
+                                onChange={(e) => setHealthInfo(prev => ({ ...prev, arthritis: e.target.checked, noneConditions: false }))}
                                 className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
                               />
-                              <span className="text-base text-gray-800">Arthritis</span>
+                              <span className="text-base text-gray-800">Back or joint problems including arthritis, joint replacements</span>
                             </label>
 
                             <label className="flex items-start gap-3 cursor-pointer">
                               <input
                                 type="checkbox"
                                 checked={healthInfo.jointReplacement}
-                                onChange={(e) => setHealthInfo(prev => ({ ...prev, jointReplacement: e.target.checked }))}
+                                onChange={(e) => setHealthInfo(prev => ({ ...prev, jointReplacement: e.target.checked, noneConditions: false }))}
                                 className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
                               />
-                              <span className="text-base text-gray-800">Joint replacement</span>
+                              <span className="text-base text-gray-800">Recent fracture or heightened risk of fracture eg. Osteoporosis</span>
                             </label>
 
                             <label className="flex items-start gap-3 cursor-pointer">
                               <input
                                 type="checkbox"
                                 checked={healthInfo.stroke}
-                                onChange={(e) => setHealthInfo(prev => ({ ...prev, stroke: e.target.checked }))}
+                                onChange={(e) => setHealthInfo(prev => ({ ...prev, stroke: e.target.checked, noneConditions: false }))}
                                 className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
                               />
                               <span className="text-base text-gray-800">Stroke</span>
@@ -478,7 +599,7 @@ export default function AddToProgram() {
                               <input
                                 type="checkbox"
                                 checked={healthInfo.epilepsy}
-                                onChange={(e) => setHealthInfo(prev => ({ ...prev, epilepsy: e.target.checked }))}
+                                onChange={(e) => setHealthInfo(prev => ({ ...prev, epilepsy: e.target.checked, noneConditions: false }))}
                                 className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
                               />
                               <span className="text-base text-gray-800">Epilepsy</span>
@@ -488,7 +609,7 @@ export default function AddToProgram() {
                               <input
                                 type="checkbox"
                                 checked={healthInfo.lowBloodPressure}
-                                onChange={(e) => setHealthInfo(prev => ({ ...prev, lowBloodPressure: e.target.checked }))}
+                                onChange={(e) => setHealthInfo(prev => ({ ...prev, lowBloodPressure: e.target.checked, noneConditions: false }))}
                                 className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
                               />
                               <span className="text-base text-gray-800">Low blood pressure</span>
@@ -497,18 +618,8 @@ export default function AddToProgram() {
                             <label className="flex items-start gap-3 cursor-pointer">
                               <input
                                 type="checkbox"
-                                checked={healthInfo.insomnia}
-                                onChange={(e) => setHealthInfo(prev => ({ ...prev, insomnia: e.target.checked }))}
-                                className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
-                              />
-                              <span className="text-base text-gray-800">Insomnia</span>
-                            </label>
-
-                            <label className="flex items-start gap-3 cursor-pointer">
-                              <input
-                                type="checkbox"
                                 checked={healthInfo.heartIssues}
-                                onChange={(e) => setHealthInfo(prev => ({ ...prev, heartIssues: e.target.checked }))}
+                                onChange={(e) => setHealthInfo(prev => ({ ...prev, heartIssues: e.target.checked, noneConditions: false }))}
                                 className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
                               />
                               <span className="text-base text-gray-800">Heart issues</span>
@@ -517,18 +628,8 @@ export default function AddToProgram() {
                             <label className="flex items-start gap-3 cursor-pointer">
                               <input
                                 type="checkbox"
-                                checked={healthInfo.menopause}
-                                onChange={(e) => setHealthInfo(prev => ({ ...prev, menopause: e.target.checked }))}
-                                className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
-                              />
-                              <span className="text-base text-gray-800">Menopause</span>
-                            </label>
-
-                            <label className="flex items-start gap-3 cursor-pointer">
-                              <input
-                                type="checkbox"
                                 checked={healthInfo.repetitiveStrainInjury}
-                                onChange={(e) => setHealthInfo(prev => ({ ...prev, repetitiveStrainInjury: e.target.checked }))}
+                                onChange={(e) => setHealthInfo(prev => ({ ...prev, repetitiveStrainInjury: e.target.checked, noneConditions: false }))}
                                 className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
                               />
                               <span className="text-base text-gray-800">Repetitive strain injury</span>
@@ -538,7 +639,7 @@ export default function AddToProgram() {
                               <input
                                 type="checkbox"
                                 checked={healthInfo.recentSurgery}
-                                onChange={(e) => setHealthInfo(prev => ({ ...prev, recentSurgery: e.target.checked }))}
+                                onChange={(e) => setHealthInfo(prev => ({ ...prev, recentSurgery: e.target.checked, noneConditions: false }))}
                                 className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
                               />
                               <span className="text-base text-gray-800">Recent surgery</span>
@@ -548,17 +649,17 @@ export default function AddToProgram() {
                               <input
                                 type="checkbox"
                                 checked={healthInfo.ms}
-                                onChange={(e) => setHealthInfo(prev => ({ ...prev, ms: e.target.checked }))}
+                                onChange={(e) => setHealthInfo(prev => ({ ...prev, ms: e.target.checked, noneConditions: false }))}
                                 className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
                               />
-                              <span className="text-base text-gray-800">MS</span>
+                              <span className="text-base text-gray-800">Neurological condition eg. MS, Parkinsons Disease</span>
                             </label>
 
                             <label className="flex items-start gap-3 cursor-pointer">
                               <input
                                 type="checkbox"
                                 checked={healthInfo.diabetes}
-                                onChange={(e) => setHealthInfo(prev => ({ ...prev, diabetes: e.target.checked }))}
+                                onChange={(e) => setHealthInfo(prev => ({ ...prev, diabetes: e.target.checked, noneConditions: false }))}
                                 className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
                               />
                               <span className="text-base text-gray-800">Diabetes</span>
@@ -568,17 +669,17 @@ export default function AddToProgram() {
                               <input
                                 type="checkbox"
                                 checked={healthInfo.recentFracture}
-                                onChange={(e) => setHealthInfo(prev => ({ ...prev, recentFracture: e.target.checked }))}
+                                onChange={(e) => setHealthInfo(prev => ({ ...prev, recentFracture: e.target.checked, noneConditions: false }))}
                                 className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
                               />
-                              <span className="text-base text-gray-800">Recent fracture</span>
+                              <span className="text-base text-gray-800">Recent medical procedure or surgery in the last 12 months?</span>
                             </label>
 
                             <label className="flex items-start gap-3 cursor-pointer">
                               <input
                                 type="checkbox"
                                 checked={healthInfo.difficultyHearing}
-                                onChange={(e) => setHealthInfo(prev => ({ ...prev, difficultyHearing: e.target.checked }))}
+                                onChange={(e) => setHealthInfo(prev => ({ ...prev, difficultyHearing: e.target.checked, noneConditions: false }))}
                                 className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
                               />
                               <span className="text-base text-gray-800">Difficulty hearing</span>
@@ -588,7 +689,7 @@ export default function AddToProgram() {
                               <input
                                 type="checkbox"
                                 checked={healthInfo.hernia}
-                                onChange={(e) => setHealthInfo(prev => ({ ...prev, hernia: e.target.checked }))}
+                                onChange={(e) => setHealthInfo(prev => ({ ...prev, hernia: e.target.checked, noneConditions: false }))}
                                 className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
                               />
                               <span className="text-base text-gray-800">Hernia</span>
@@ -598,7 +699,7 @@ export default function AddToProgram() {
                               <input
                                 type="checkbox"
                                 checked={healthInfo.osteoporosis}
-                                onChange={(e) => setHealthInfo(prev => ({ ...prev, osteoporosis: e.target.checked }))}
+                                onChange={(e) => setHealthInfo(prev => ({ ...prev, osteoporosis: e.target.checked, noneConditions: false }))}
                                 className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
                               />
                               <span className="text-base text-gray-800">Osteoporosis</span>
@@ -607,17 +708,30 @@ export default function AddToProgram() {
                             <label className="flex items-start gap-3 cursor-pointer">
                               <input
                                 type="checkbox"
-                                checked={healthInfo.detachedRetina}
-                                onChange={(e) => setHealthInfo(prev => ({ ...prev, detachedRetina: e.target.checked }))}
+                                checked={healthInfo.other}
+                                onChange={(e) => {
+                                  setHealthInfo(prev => ({ ...prev, other: e.target.checked, noneConditions: false }));
+                                  if (!e.target.checked) setHealthInfo(prev => ({ ...prev, otherDetails: '' }));
+                                }}
                                 className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-0.5 flex-shrink-0"
                               />
-                              <span className="text-base text-gray-800">Detached Retina</span>
+                              <span className="text-base text-gray-800">Other</span>
                             </label>
                           </div>
+
+                          {healthInfo.other && (
+                            <textarea
+                              value={healthInfo.otherDetails}
+                              onChange={(e) => setHealthInfo(prev => ({ ...prev, otherDetails: e.target.value }))}
+                              className="w-full mt-3 px-4 py-3 border-2 border-gray-300 rounded-lg text-base focus:border-orange-500 focus:outline-none"
+                              rows={3}
+                              placeholder="Please describe your condition"
+                            />
+                          )}
                         </div>
 
                         {/* Medications */}
-                        <div className="bg-white rounded-lg p-6 border-2 border-orange-200">
+                        <div className={`bg-white rounded-lg p-6 border-2 border-orange-200 ${healthInfo.noneConditions ? 'opacity-40 pointer-events-none' : ''}`}>
                           <label className="flex items-start gap-3 cursor-pointer mb-3">
                             <input
                               type="checkbox"

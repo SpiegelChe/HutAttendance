@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Layout } from '../components/Layout';
-import { ClipboardCheck, Check, Calendar } from 'lucide-react';
+import { ClipboardCheck, Check, Calendar, User, X, Phone, Mail, MapPin, Users } from 'lucide-react';
 import { supabase, Program } from '../../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 
@@ -11,6 +11,7 @@ interface EnrolledParticipant {
   last_name: string;
   email: string;
   phone: string;
+  [key: string]: any;
 }
 
 export default function Attendance() {
@@ -24,6 +25,7 @@ export default function Attendance() {
   const [programsForSelectedDate, setProgramsForSelectedDate] = useState<Program[]>([]);
   const [programParticipants, setProgramParticipants] = useState<EnrolledParticipant[]>([]);
   const [loading, setLoading] = useState(false);
+  const [detailsParticipant, setDetailsParticipant] = useState<EnrolledParticipant | null>(null);
 
   // Get day of week for a given date (0-6, where 0 is Sunday)
   const getDayOfWeek = (dateString: string) => {
@@ -147,7 +149,17 @@ export default function Attendance() {
             first_name,
             last_name,
             email,
-            phone
+            phone,
+            home_tel,
+            date_of_birth,
+            address_line1,
+            address_line2,
+            post_code,
+            emergency_contact_name,
+            emergency_contact_phone,
+            emergency_contact_relationship,
+            council_region,
+            program_specific_data
           )
         `)
         .eq('program_id', programId);
@@ -208,6 +220,18 @@ export default function Attendance() {
   };
 
   const selectedProgramName = programs.find(p => p.id === selectedProgram)?.name;
+
+  const CHILDREN_PROGRAMS = ['Outdoor Playgroup', 'Homework Club', 'Dungeons & Dragons', 'Intergenerational Mentoring'];
+  const FITNESS_PROGRAMS = ['Community Fun Fitness', 'Strength & Balance (Stirling)', 'Chi Kung', 'Walking Group', "Men's Moves"];
+
+  const getProgramCategory = (programName: string | undefined) => {
+    if (!programName) return 'general';
+    if (CHILDREN_PROGRAMS.includes(programName)) return 'children';
+    if (FITNESS_PROGRAMS.includes(programName)) return 'fitness';
+    return 'general';
+  };
+
+  const programCategory = getProgramCategory(selectedProgramName);
 
   if (showSuccess) {
     return (
@@ -339,17 +363,21 @@ export default function Attendance() {
               ) : (
                 <div className="space-y-4 mb-8">
                   {programParticipants.map((participant) => (
-                    <label
+                    <div
                       key={participant.id}
-                      className="flex items-center gap-5 p-5 border-4 border-gray-300 rounded-xl hover:bg-blue-50 hover:border-blue-400 cursor-pointer transition-all"
+                      className={`flex items-center gap-5 p-5 border-4 rounded-xl transition-all ${
+                        attendance[participant.id]
+                          ? 'border-green-400 bg-green-50'
+                          : 'border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50'
+                      }`}
                     >
                       <input
                         type="checkbox"
                         checked={attendance[participant.id] || false}
                         onChange={() => handleToggleAttendance(participant.id)}
-                        className="w-8 h-8 text-blue-600 rounded-lg focus:ring-4 focus:ring-blue-500 cursor-pointer"
+                        className="w-8 h-8 text-blue-600 rounded-lg focus:ring-4 focus:ring-blue-500 cursor-pointer flex-shrink-0"
                       />
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="text-xl font-bold text-gray-900">
                           {participant.first_name} {participant.last_name}
                         </div>
@@ -358,11 +386,19 @@ export default function Attendance() {
                         </div>
                       </div>
                       {attendance[participant.id] && (
-                        <div className="px-5 py-2 bg-green-600 text-white text-lg font-bold rounded-full shadow-lg">
+                        <div className="px-5 py-2 bg-green-600 text-white text-lg font-bold rounded-full shadow-lg flex-shrink-0">
                           Present ✓
                         </div>
                       )}
-                    </label>
+                                      <button
+                        onClick={() => setDetailsParticipant(participant)}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-base font-semibold transition-colors flex-shrink-0"
+                        title="View participant details"
+                      >
+                        <User size={18} />
+                        Details
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -410,6 +446,238 @@ export default function Attendance() {
           )}
         </div>
       </div>
+      {/* Participant Details Popup */}
+      {detailsParticipant && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border-4 border-blue-300 overflow-hidden max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 flex items-center gap-4">
+              <div className="bg-white p-3 rounded-full flex-shrink-0">
+                <User size={32} className="text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-2xl font-bold text-white">
+                  {detailsParticipant.first_name} {detailsParticipant.last_name}
+                </p>
+                {detailsParticipant.date_of_birth && (
+                  <p className="text-blue-200 text-sm mt-0.5">
+                    DOB: {new Date(detailsParticipant.date_of_birth).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setDetailsParticipant(null)}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0"
+              >
+                <X size={24} className="text-white" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-5 overflow-y-auto flex-1">
+              {/* Contact */}
+              <div>
+                <h4 className="text-sm font-bold text-blue-700 uppercase tracking-wide mb-2">Contact</h4>
+                <div className="space-y-2">
+                  {detailsParticipant.email && (
+                    <div className="flex items-center gap-3 text-gray-700">
+                      <Mail size={16} className="text-blue-500 flex-shrink-0" />
+                      <span className="text-base">{detailsParticipant.email}</span>
+                    </div>
+                  )}
+                  {detailsParticipant.phone && (
+                    <div className="flex items-center gap-3 text-gray-700">
+                      <Phone size={16} className="text-blue-500 flex-shrink-0" />
+                      <span className="text-base">{detailsParticipant.phone}</span>
+                    </div>
+                  )}
+                  {detailsParticipant.home_tel && (
+                    <div className="flex items-center gap-3 text-gray-700">
+                      <Phone size={16} className="text-blue-500 flex-shrink-0" />
+                      <span className="text-base">{detailsParticipant.home_tel} (home)</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Address */}
+              {detailsParticipant.address_line1 && (
+                <div>
+                  <h4 className="text-sm font-bold text-blue-700 uppercase tracking-wide mb-2">Address</h4>
+                  <div className="flex items-start gap-3 text-gray-700">
+                    <MapPin size={16} className="text-blue-500 flex-shrink-0 mt-0.5" />
+                    <span className="text-base">
+                      {detailsParticipant.address_line1}
+                      {detailsParticipant.address_line2 && `, ${detailsParticipant.address_line2}`}
+                      {detailsParticipant.post_code && `, ${detailsParticipant.post_code}`}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Emergency Contact */}
+              {detailsParticipant.emergency_contact_name && (
+                <div>
+                  <h4 className="text-sm font-bold text-blue-700 uppercase tracking-wide mb-2">Emergency Contact</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 text-gray-700">
+                      <Users size={16} className="text-blue-500 flex-shrink-0" />
+                      <span className="text-base">
+                        {detailsParticipant.emergency_contact_name}
+                        {detailsParticipant.emergency_contact_relationship && (
+                          <span className="text-gray-500 text-sm ml-2">({detailsParticipant.emergency_contact_relationship})</span>
+                        )}
+                      </span>
+                    </div>
+                    {detailsParticipant.emergency_contact_phone && (
+                      <div className="flex items-center gap-3 text-gray-700">
+                        <Phone size={16} className="text-blue-500 flex-shrink-0" />
+                        <span className="text-base">{detailsParticipant.emergency_contact_phone}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Program-specific details */}
+            {(() => {
+              let specificData: any = {};
+              try {
+                const raw = detailsParticipant.program_specific_data;
+                specificData = typeof raw === 'string' ? JSON.parse(raw) : (raw || {});
+              } catch { specificData = {}; }
+
+              if (programCategory === 'fitness' && specificData.fitness) {
+                const f = specificData.fitness;
+                const conditions: string[] = f.healthConditions || [];
+                const noneSelected = conditions.includes('None');
+                return (
+                  <div className="px-6 pb-2">
+                    <h4 className="text-sm font-bold text-orange-700 uppercase tracking-wide mb-3">Fitness & Wellbeing — Health Info</h4>
+                    <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 space-y-3">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-600 mb-1">Medical Conditions</p>
+                        {noneSelected ? (
+                          <p className="text-base text-gray-800">None</p>
+                        ) : conditions.length > 0 ? (
+                          <ul className="list-disc list-inside space-y-0.5">
+                            {conditions.map((c: string) => (
+                              <li key={c} className="text-base text-gray-800">{c}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-base text-gray-400 italic">Not recorded</p>
+                        )}
+                        {f.otherConditionDetails && (
+                          <p className="text-sm text-gray-600 mt-1 ml-4">Details: {f.otherConditionDetails}</p>
+                        )}
+                      </div>
+                      {!noneSelected && f.takingMedications && (
+                        <div>
+                          <p className="text-sm font-semibold text-gray-600 mb-1">Taking Medications</p>
+                          <p className="text-base text-gray-800">{f.takingMedications}</p>
+                          {f.medicationEffects && <p className="text-sm text-gray-600 mt-1">{f.medicationEffects}</p>}
+                        </div>
+                      )}
+                      {f.regularExercise && (
+                        <div>
+                          <p className="text-sm font-semibold text-gray-600 mb-1">Regular Exercise</p>
+                          <p className="text-base text-gray-800">{f.regularExercise}</p>
+                        </div>
+                      )}
+                      {f.healthDeclarationSigned && (
+                        <div>
+                          <p className="text-sm font-semibold text-gray-600 mb-1">Health Declaration Signed</p>
+                          <p className="text-base text-gray-800">Yes{f.healthDeclarationDate ? ` — ${new Date(f.healthDeclarationDate).toLocaleDateString('en-AU')}` : ''}</p>
+                        </div>
+                      )}
+                      {f.medicalFormReceived && (
+                        <div>
+                          <p className="text-sm font-semibold text-gray-600 mb-1">Medical Form Received</p>
+                          <p className="text-base text-gray-800">{f.medicalFormReceived}</p>
+                        </div>
+                      )}
+                      {f.freeFormNotes && (
+                        <div>
+                          <p className="text-sm font-semibold text-gray-600 mb-1">Notes</p>
+                          <p className="text-base text-gray-800">{f.freeFormNotes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              }
+
+              if (programCategory === 'children' && specificData.children) {
+                const c = specificData.children;
+                const children: any[] = Array.isArray(c) ? c : [c];
+                return (
+                  <div className="px-6 pb-2">
+                    <h4 className="text-sm font-bold text-purple-700 uppercase tracking-wide mb-3">Children's Program — Child Info</h4>
+                    {children.map((child: any, i: number) => (
+                      <div key={i} className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4 mb-3 space-y-2">
+                        {children.length > 1 && <p className="text-sm font-bold text-purple-700">Child {i + 1}</p>}
+                        {(child.childGivenName || child.childFamilyName) && (
+                          <div>
+                            <p className="text-sm font-semibold text-gray-600 mb-0.5">Child Name</p>
+                            <p className="text-base text-gray-800">{child.childGivenName} {child.childFamilyName}</p>
+                          </div>
+                        )}
+                        {child.childGender && (
+                          <div>
+                            <p className="text-sm font-semibold text-gray-600 mb-0.5">Gender</p>
+                            <p className="text-base text-gray-800">{child.childGender}</p>
+                          </div>
+                        )}
+                        {child.childDOB && (
+                          <div>
+                            <p className="text-sm font-semibold text-gray-600 mb-0.5">Date of Birth</p>
+                            <p className="text-base text-gray-800">{new Date(child.childDOB).toLocaleDateString('en-AU')}</p>
+                          </div>
+                        )}
+                        {child.schoolAttending && (
+                          <div>
+                            <p className="text-sm font-semibold text-gray-600 mb-0.5">School</p>
+                            <p className="text-base text-gray-800">{child.schoolAttending}{child.yearLevel ? `, Year ${child.yearLevel}` : ''}</p>
+                          </div>
+                        )}
+                        {child.authorisedPerson1Name && (
+                          <div>
+                            <p className="text-sm font-semibold text-gray-600 mb-0.5">Authorised to Collect</p>
+                            <p className="text-base text-gray-800">{child.authorisedPerson1Name}{child.authorisedPerson1Phone ? ` — ${child.authorisedPerson1Phone}` : ''}</p>
+                            {child.authorisedPerson2Name && (
+                              <p className="text-base text-gray-800">{child.authorisedPerson2Name}{child.authorisedPerson2Phone ? ` — ${child.authorisedPerson2Phone}` : ''}</p>
+                            )}
+                          </div>
+                        )}
+                        {child.custodyIssues && child.custodyIssues !== 'No' && (
+                          <div>
+                            <p className="text-sm font-semibold text-red-600 mb-0.5">⚠ Custody Issues</p>
+                            <p className="text-base text-gray-800">{child.custodyIssuesDetails || child.custodyIssues}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
+
+              return null;
+            })()}
+
+            {/* Footer */}
+            <div className="px-6 pb-6">
+              <button
+                onClick={() => setDetailsParticipant(null)}
+                className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-lg rounded-xl transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

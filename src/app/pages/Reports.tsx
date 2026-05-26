@@ -11,6 +11,7 @@ import {
 import { PieChart, Pie, Cell, Tooltip } from "recharts";
 import { ADELAIDE_HILLS_TOWNSHIPS } from "../utils/constants";
 import logo from "figma:asset/c717e59cf8f32fe25477e30d5de63135f3057cc8.png";
+import * as XLSX from "xlsx";
 
 type TimePeriod =
   | "weekly"
@@ -19,7 +20,6 @@ type TimePeriod =
   | "annually"
   | "custom";
 
-// Program category mapping (based on program names and descriptions)
 const PROGRAM_CATEGORIES = [
   "Healthy Living",
   "Interest & Social",
@@ -28,7 +28,6 @@ const PROGRAM_CATEGORIES = [
   "Sustainability",
 ] as const;
 
-// Map programs to categories
 const getProgramCategory = (programName: string): string => {
   const name = programName.toLowerCase();
   if (
@@ -58,10 +57,9 @@ const getProgramCategory = (programName: string): string => {
   if (name.includes("garden")) {
     return "Sustainability";
   }
-  return "Interest & Social"; // Default category
+  return "Interest & Social";
 };
 
-// Age groups
 const AGE_GROUPS = [
   "under 18",
   "18-24",
@@ -70,7 +68,6 @@ const AGE_GROUPS = [
   "65+",
 ] as const;
 
-// Gender options
 const GENDERS = [
   "Female",
   "Male",
@@ -79,13 +76,9 @@ const GENDERS = [
   "Other",
 ] as const;
 
-// ATSI status
 const ATSI_STATUS = ["Yes", "No"] as const;
-
-// CALD background
 const CALD_BACKGROUND = ["Yes", "No"] as const;
 
-// Councils
 const COUNCILS = [
   "Adelaide Hills Council",
   "Other Council",
@@ -104,20 +97,34 @@ interface FilterValues {
   township: string;
 }
 
+interface ParticipantStatus {
+  id: string;
+  isActive: boolean;
+}
+
 interface ReportData {
   uniqueParticipants: number;
   totalAttendances: number;
   totalRecords: number;
   attendanceRate: number;
+  atsiCount: number;
+  caldCount: number;
   ageDistribution: { name: string; value: number }[];
   genderDistribution: { name: string; value: number }[];
+  councilDistribution: { name: string; value: number }[];
+  townshipDistribution: { name: string; value: number }[];
+  referralDistribution: { name: string; value: number }[];
+  disabilityDistribution: { name: string; value: number }[];
   programData: {
     program: string;
     category: string;
     uniqueParticipants: number;
     attendances: number;
     attendanceRate: number;
+    sessionsHeld: number;
   }[];
+  activeParticipants: { name: string; status: string }[];
+  inactiveParticipants: { name: string; status: string }[];
 }
 
 export default function Reports() {
@@ -129,7 +136,6 @@ export default function Reports() {
   const [showPreview, setShowPreview] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
 
-  // Calculate default dates based on monthly period
   const today = new Date();
   const defaultEndDate = today.toISOString().split("T")[0];
   const defaultStartDate = new Date(
@@ -160,11 +166,12 @@ export default function Reports() {
   const [attendanceRecords, setAttendanceRecords] = useState<
     AttendanceRecord[]
   >([]);
+  const [participantStatuses, setParticipantStatuses] =
+    useState<ParticipantStatus[]>([]);
   const [loading, setLoading] = useState(true);
 
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
-  // Track which filter values actually exist in the database
   const [availableValues, setAvailableValues] = useState({
     programCategories: new Set<string>(),
     programs: new Set<string>(),
@@ -180,7 +187,6 @@ export default function Reports() {
     fetchData();
   }, []);
 
-  // Close export menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -190,14 +196,12 @@ export default function Reports() {
         setShowExportMenu(false);
       }
     };
-
     if (showExportMenu) {
       document.addEventListener(
         "mousedown",
         handleClickOutside,
       );
     }
-
     return () => {
       document.removeEventListener(
         "mousedown",
@@ -206,12 +210,10 @@ export default function Reports() {
     };
   }, [showExportMenu]);
 
-  // Update start date when time period changes
   useEffect(() => {
     if (timePeriod !== "custom") {
       const end = new Date(filters.endDate);
       let start = new Date(end);
-
       switch (timePeriod) {
         case "weekly":
           start.setDate(end.getDate() - 7);
@@ -226,7 +228,6 @@ export default function Reports() {
           start.setFullYear(end.getFullYear() - 1);
           break;
       }
-
       setFilters((prev) => ({
         ...prev,
         startDate: start.toISOString().split("T")[0],
@@ -237,29 +238,23 @@ export default function Reports() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch programs
       const { data: programsData, error: programsError } =
         await supabase
           .from("programs")
           .select("*")
           .order("name", { ascending: true });
-
       if (programsError) throw programsError;
       setPrograms(programsData || []);
 
-      // Fetch participants
       const {
         data: participantsData,
         error: participantsError,
       } = await supabase.from("participants").select("*");
-
       if (participantsError) throw participantsError;
       setParticipants(participantsData || []);
 
-      // Fetch attendance records
       const { data: attendanceData, error: attendanceError } =
         await supabase.from("attendance_records").select("*");
-
       if (attendanceError) {
         console.error(
           "Error fetching attendance records:",
@@ -270,7 +265,37 @@ export default function Reports() {
         setAttendanceRecords(attendanceData || []);
       }
 
-      // Determine available values
+      // Fetch enrollment data to determine active/inactive status
+      const { data: enrollmentData } = await supabase
+        .from("program_enrollments")
+        .select("participant_id, is_active, withdrawal_reason");
+
+      if (enrollmentData && participantsData) {
+        const statusMap = new Map<string, boolean>();
+        (participantsData || []).forEach((p: any) => {
+          const enrollments = enrollmentData.filter(
+            (e: any) => e.participant_id === p.id,
+          );
+          if (enrollments.length === 0) {
+            statusMap.set(p.id, false);
+          } else {
+            const hasActive = enrollments.some(
+              (e: any) =>
+                e.is_active !== false ||
+                e.withdrawal_reason !== "Profile deactivated",
+            );
+            statusMap.set(p.id, hasActive);
+          }
+        });
+        const statuses: ParticipantStatus[] = (
+          participantsData || []
+        ).map((p: any) => ({
+          id: p.id,
+          isActive: statusMap.get(p.id) ?? false,
+        }));
+        setParticipantStatuses(statuses);
+      }
+
       const cats = new Set<string>();
       const progs = new Set<string>();
       const ages = new Set<string>();
@@ -280,41 +305,28 @@ export default function Reports() {
       const couns = new Set<string>();
       const towns = new Set<string>();
 
-      // Available program categories and programs
       (programsData || []).forEach((prog) => {
         const cat = getProgramCategory(prog.name);
         cats.add(cat);
         progs.add(prog.name);
       });
 
-      // Available participant attributes
-      (participantsData || []).forEach((p) => {
-        // Age group
+      (participantsData || []).forEach((p: any) => {
         const age = calculateAge(p.date_of_birth);
         ages.add(getAgeGroup(age));
-
-        // Gender
         if (p.gender) gens.add(p.gender);
-
-        // ATSI status
         if (p.identify_aboriginal_tsi)
           atsi.add(p.identify_aboriginal_tsi);
-
-        // CALD background (based on country of birth or language)
         const isCald =
           (p.country_of_birth &&
             p.country_of_birth !== "Australia") ||
           p.speak_other_language === "Yes";
         cald.add(isCald ? "Yes" : "No");
-
-        // Council
         const council =
           p.council_region === "Adelaide Hills Council"
             ? "Adelaide Hills Council"
             : "Other Council";
         couns.add(council);
-
-        // Township
         if (p.township) towns.add(p.township);
       });
 
@@ -358,60 +370,59 @@ export default function Reports() {
     return "65+";
   };
 
-  // Generate report data
   const reportData = useMemo<ReportData>(() => {
-    // Filter participants based on criteria
-    const filteredParticipants = participants.filter((p) => {
-      const age = calculateAge(p.date_of_birth);
-      const ageGroup = getAgeGroup(age);
-      const isCald =
-        (p.country_of_birth &&
-          p.country_of_birth !== "Australia") ||
-        p.speak_other_language === "Yes";
-      const council =
-        p.council_region === "Adelaide Hills Council"
-          ? "Adelaide Hills Council"
-          : "Other Council";
+    const filteredParticipants = (participants as any[]).filter(
+      (p) => {
+        const age = calculateAge(p.date_of_birth);
+        const ageGroup = getAgeGroup(age);
+        const isCald =
+          (p.country_of_birth &&
+            p.country_of_birth !== "Australia") ||
+          p.speak_other_language === "Yes";
+        const council =
+          p.council_region === "Adelaide Hills Council"
+            ? "Adelaide Hills Council"
+            : "Other Council";
 
-      if (
-        filters.ageGroup !== "all" &&
-        ageGroup !== filters.ageGroup
-      )
-        return false;
-      if (
-        filters.gender !== "all" &&
-        p.gender !== filters.gender
-      )
-        return false;
-      if (
-        filters.atsiStatus !== "all" &&
-        p.identify_aboriginal_tsi !== filters.atsiStatus
-      )
-        return false;
-      if (
-        filters.caldBackground !== "all" &&
-        (isCald ? "Yes" : "No") !== filters.caldBackground
-      )
-        return false;
-      if (
-        filters.council !== "all" &&
-        council !== filters.council
-      )
-        return false;
-      if (
-        filters.township !== "all" &&
-        p.township !== filters.township
-      )
-        return false;
+        if (
+          filters.ageGroup !== "all" &&
+          ageGroup !== filters.ageGroup
+        )
+          return false;
+        if (
+          filters.gender !== "all" &&
+          p.gender !== filters.gender
+        )
+          return false;
+        if (
+          filters.atsiStatus !== "all" &&
+          p.identify_aboriginal_tsi !== filters.atsiStatus
+        )
+          return false;
+        if (
+          filters.caldBackground !== "all" &&
+          (isCald ? "Yes" : "No") !== filters.caldBackground
+        )
+          return false;
+        if (
+          filters.council !== "all" &&
+          council !== filters.council
+        )
+          return false;
+        if (
+          filters.township !== "all" &&
+          p.township !== filters.township
+        )
+          return false;
 
-      return true;
-    });
+        return true;
+      },
+    );
 
     const participantIds = new Set(
       filteredParticipants.map((p) => p.id),
     );
 
-    // Filter programs
     const filteredPrograms = programs.filter((prog) => {
       const cat = getProgramCategory(prog.name);
       if (
@@ -431,25 +442,28 @@ export default function Reports() {
       filteredPrograms.map((p) => p.id),
     );
 
-    // Filter attendance records
     const filteredRecords = attendanceRecords.filter(
       (record) => {
         if (!participantIds.has(record.participant_id))
           return false;
         if (!programIds.has(record.program_id)) return false;
-
         const recordDate = new Date(record.date);
         const startDate = new Date(filters.startDate);
         const endDate = new Date(filters.endDate);
-
         if (recordDate < startDate || recordDate > endDate)
           return false;
-
         return true;
       },
     );
 
-    // Calculate statistics
+    // Get participants who actually attended the filtered programs
+    const participantsInFilteredPrograms = new Set(
+      filteredRecords.map((r) => r.participant_id),
+    );
+    const participantsForCharts = filteredParticipants.filter(
+      (p) => participantsInFilteredPrograms.has(p.id),
+    );
+
     const uniqueParticipantIds = new Set(
       filteredRecords.map((r) => r.participant_id),
     );
@@ -465,9 +479,22 @@ export default function Reports() {
         ? (totalAttendances / totalRecords) * 100
         : 0;
 
-    // Age distribution
+    // ATSI count - use participantsForCharts (filtered by program)
+    const atsiCount = participantsForCharts.filter(
+      (p) => p.identify_aboriginal_tsi === "Yes",
+    ).length;
+
+    // CALD count - use participantsForCharts (filtered by program)
+    const caldCount = participantsForCharts.filter(
+      (p) =>
+        (p.country_of_birth &&
+          p.country_of_birth !== "Australia") ||
+        p.speak_other_language === "Yes",
+    ).length;
+
+    // Age distribution - use participantsForCharts (filtered by program)
     const ageDistMap = new Map<string, number>();
-    filteredParticipants.forEach((p) => {
+    participantsForCharts.forEach((p) => {
       const age = calculateAge(p.date_of_birth);
       const group = getAgeGroup(age);
       ageDistMap.set(group, (ageDistMap.get(group) || 0) + 1);
@@ -476,9 +503,9 @@ export default function Reports() {
       ageDistMap.entries(),
     ).map(([name, value]) => ({ name, value }));
 
-    // Gender distribution
+    // Gender distribution - use participantsForCharts (filtered by program)
     const genderDistMap = new Map<string, number>();
-    filteredParticipants.forEach((p) => {
+    participantsForCharts.forEach((p) => {
       if (p.gender) {
         genderDistMap.set(
           p.gender,
@@ -490,6 +517,87 @@ export default function Reports() {
       genderDistMap.entries(),
     ).map(([name, value]) => ({ name, value }));
 
+    // Council distribution - use participantsForCharts (filtered by program)
+    const councilDistMap = new Map<string, number>();
+    participantsForCharts.forEach((p) => {
+      const council = p.council_region || "Unknown";
+      councilDistMap.set(
+        council,
+        (councilDistMap.get(council) || 0) + 1,
+      );
+    });
+    const councilDistribution = Array.from(
+      councilDistMap.entries(),
+    ).map(([name, value]) => ({ name, value }));
+
+    // Township distribution - use participantsForCharts (filtered by program)
+    const townshipDistMap = new Map<string, number>();
+    participantsForCharts.forEach((p) => {
+      const township = p.township || "Unknown";
+      townshipDistMap.set(
+        township,
+        (townshipDistMap.get(township) || 0) + 1,
+      );
+    });
+    const townshipDistribution = Array.from(
+      townshipDistMap.entries(),
+    ).map(([name, value]) => ({ name, value }));
+
+    // Referral / "How did you hear about us" distribution - use participantsForCharts (filtered by program)
+    const referralDistMap = new Map<string, number>();
+    participantsForCharts.forEach((p) => {
+      let sources: string[] = [];
+      if (p.referral_sources) {
+        try {
+          const parsed =
+            typeof p.referral_sources === "string"
+              ? JSON.parse(p.referral_sources)
+              : p.referral_sources;
+          if (Array.isArray(parsed)) sources = parsed;
+        } catch {
+          // ignore parse errors
+        }
+      }
+      if (sources.length === 0) {
+        referralDistMap.set(
+          "Not specified",
+          (referralDistMap.get("Not specified") || 0) + 1,
+        );
+      } else {
+        sources.forEach((src: string) => {
+          // Trim "Other: ..." to just "Other"
+          const label = src.startsWith("Other:")
+            ? "Other"
+            : src;
+          referralDistMap.set(
+            label,
+            (referralDistMap.get(label) || 0) + 1,
+          );
+        });
+      }
+    });
+    const referralDistribution = Array.from(
+      referralDistMap.entries(),
+    ).map(([name, value]) => ({ name, value }));
+
+    // Disability / additional requirements distribution - use participantsForCharts (filtered by program)
+    const disabilityDistMap = new Map<string, number>();
+    participantsForCharts.forEach((p) => {
+      const hasReqs =
+        p.additional_requirements &&
+        p.additional_requirements.trim() !== "";
+      const label = hasReqs
+        ? "Has Additional Requirements"
+        : "No Additional Requirements";
+      disabilityDistMap.set(
+        label,
+        (disabilityDistMap.get(label) || 0) + 1,
+      );
+    });
+    const disabilityDistribution = Array.from(
+      disabilityDistMap.entries(),
+    ).map(([name, value]) => ({ name, value }));
+
     // Program data
     const programDataMap = new Map<
       string,
@@ -498,6 +606,7 @@ export default function Reports() {
         participantIds: Set<string>;
         attendances: number;
         totalRecords: number;
+        sessionDates: Set<string>;
       }
     >();
 
@@ -506,18 +615,17 @@ export default function Reports() {
         (p) => p.id === record.program_id,
       );
       if (!prog) return;
-
       const existing = programDataMap.get(prog.name) || {
         category: getProgramCategory(prog.name),
         participantIds: new Set(),
         attendances: 0,
         totalRecords: 0,
+        sessionDates: new Set(),
       };
-
       existing.participantIds.add(record.participant_id);
       if (record.status === "present") existing.attendances++;
       existing.totalRecords++;
-
+      existing.sessionDates.add(record.date);
       programDataMap.set(prog.name, existing);
     });
 
@@ -532,18 +640,63 @@ export default function Reports() {
         data.totalRecords > 0
           ? (data.attendances / data.totalRecords) * 100
           : 0,
+      sessionsHeld: data.sessionDates.size,
     }));
+
+    // Active / inactive participants list
+    const statusById = new Map(
+      participantStatuses.map((s) => [s.id, s.isActive]),
+    );
+    const activeParticipants: {
+      name: string;
+      status: string;
+    }[] = [];
+    const inactiveParticipants: {
+      name: string;
+      status: string;
+    }[] = [];
+
+    filteredParticipants.forEach((p) => {
+      const isActive = statusById.get(p.id) ?? false;
+      const name = `${p.first_name} ${p.last_name}`;
+      if (isActive) {
+        activeParticipants.push({ name, status: "Active" });
+      } else {
+        inactiveParticipants.push({ name, status: "Inactive" });
+      }
+    });
+
+    activeParticipants.sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+    inactiveParticipants.sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
 
     return {
       uniqueParticipants,
       totalAttendances,
       totalRecords,
       attendanceRate,
+      atsiCount,
+      caldCount,
       ageDistribution,
       genderDistribution,
+      councilDistribution,
+      townshipDistribution,
+      referralDistribution,
+      disabilityDistribution,
       programData,
+      activeParticipants,
+      inactiveParticipants,
     };
-  }, [participants, programs, attendanceRecords, filters]);
+  }, [
+    participants,
+    programs,
+    attendanceRecords,
+    filters,
+    participantStatuses,
+  ]);
 
   const handleFilterChange = (
     key: keyof FilterValues,
@@ -560,11 +713,15 @@ export default function Reports() {
     if (format === "pdf") {
       window.print();
     } else {
-      // Export CSV
-      const csvData = [
+      // Export as Excel with two sheets
+      const wb = XLSX.utils.book_new();
+
+      // Sheet 1: Program Details
+      const programSheetData = [
         [
           "Program",
           "Category",
+          "Sessions Held",
           "Unique Participants",
           "Attendances",
           "Attendance Rate",
@@ -572,22 +729,74 @@ export default function Reports() {
         ...reportData.programData.map((p) => [
           p.program,
           p.category,
-          p.uniqueParticipants.toString(),
-          p.attendances.toString(),
+          p.sessionsHeld,
+          p.uniqueParticipants,
+          p.attendances,
           `${p.attendanceRate.toFixed(1)}%`,
         ]),
       ];
+      const ws1 = XLSX.utils.aoa_to_sheet(programSheetData);
+      XLSX.utils.book_append_sheet(wb, ws1, "Program Details");
 
-      const csvContent = csvData
-        .map((row) => row.join(","))
-        .join("\n");
-      const blob = new Blob([csvContent], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `report-${filters.startDate}-to-${filters.endDate}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
+      // Sheet 2: Participants (Active & Inactive)
+      const participantSheetData = [
+        ["Name", "Status"],
+        ...reportData.activeParticipants.map((p) => [
+          p.name,
+          p.status,
+        ]),
+        ...reportData.inactiveParticipants.map((p) => [
+          p.name,
+          p.status,
+        ]),
+      ];
+      const ws2 = XLSX.utils.aoa_to_sheet(participantSheetData);
+      XLSX.utils.book_append_sheet(wb, ws2, "Participants");
+
+      // Sheet 3: Summary Stats
+      const summarySheetData = [
+        ["Metric", "Value"],
+        ["Unique Participants", reportData.uniqueParticipants],
+        ["Total Attendances", reportData.totalAttendances],
+        ["Total Records", reportData.totalRecords],
+        [
+          "Attendance Rate",
+          `${reportData.attendanceRate.toFixed(1)}%`,
+        ],
+        ["Identifying as ATSI", reportData.atsiCount],
+        ["Identifying as CALD", reportData.caldCount],
+        [],
+        ["Council Area", "Count"],
+        ...reportData.councilDistribution.map((d) => [
+          d.name,
+          d.value,
+        ]),
+        [],
+        ["Township", "Count"],
+        ...reportData.townshipDistribution.map((d) => [
+          d.name,
+          d.value,
+        ]),
+        [],
+        ["How Did You Hear About Us", "Count"],
+        ...reportData.referralDistribution.map((d) => [
+          d.name,
+          d.value,
+        ]),
+        [],
+        ["Disability / Additional Requirements", "Count"],
+        ...reportData.disabilityDistribution.map((d) => [
+          d.name,
+          d.value,
+        ]),
+      ];
+      const ws3 = XLSX.utils.aoa_to_sheet(summarySheetData);
+      XLSX.utils.book_append_sheet(wb, ws3, "Summary");
+
+      XLSX.writeFile(
+        wb,
+        `report-${filters.startDate}-to-${filters.endDate}.xlsx`,
+      );
     }
   };
 
@@ -612,6 +821,10 @@ export default function Reports() {
     "#F59E0B",
     "#10B981",
     "#EC4899",
+    "#F97316",
+    "#06B6D4",
+    "#84CC16",
+    "#A855F7",
   ];
 
   const renderCenteredPieChart = (
@@ -1051,7 +1264,7 @@ export default function Reports() {
                     }}
                     className="block w-full whitespace-nowrap px-4 py-3 text-left text-[0.95rem] text-[#152238] hover:bg-slate-50"
                   >
-                    Export as CSV
+                    Export as Excel (.xlsx)
                   </button>
                 </div>
               )}
@@ -1063,7 +1276,7 @@ export default function Reports() {
         {showPreview && (
           <div
             ref={reportRef}
-            className="bg-white rounded-2xl shadow-lg p-8 mb-8 print:shadow-none print:p-4"
+            className="mb-8 rounded-2xl bg-white p-8 shadow-lg print:p-4 print:shadow-none"
           >
             {/* Report Header */}
             <div className="mb-6 border-b-2 border-gray-200 pb-4 print:mb-4 print:pb-3">
@@ -1078,7 +1291,7 @@ export default function Reports() {
                     <h1 className="text-3xl font-bold text-gray-900">
                       The Hut Community Centre
                     </h1>
-                    <p className="text-lg text-gray-600 mt-1">
+                    <p className="mt-1 text-lg text-gray-600">
                       {getReportSubtitle()}
                     </p>
                   </div>
@@ -1104,47 +1317,62 @@ export default function Reports() {
               </div>
             </div>
 
-            {/* Key Metrics */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6 print:mb-4">
-              <div className="bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-xl p-6 shadow-lg print:bg-teal-600 print:shadow-none">
-                <div className="text-sm font-semibold mb-2">
+            {/* Key Metrics — 6 cards */}
+            <div className="mb-6 grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-6 print:mb-4">
+              <div className="rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 p-5 text-white shadow-lg print:bg-teal-600 print:shadow-none">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide">
                   Unique Participants
                 </div>
                 <div className="text-4xl font-bold">
                   {reportData.uniqueParticipants}
                 </div>
               </div>
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl p-6 shadow-lg print:bg-blue-600 print:shadow-none">
-                <div className="text-sm font-semibold mb-2">
+              <div className="rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 p-5 text-white shadow-lg print:bg-blue-600 print:shadow-none">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide">
                   Total Attendances
                 </div>
                 <div className="text-4xl font-bold">
                   {reportData.totalAttendances}
                 </div>
               </div>
-              <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-xl p-6 shadow-lg print:bg-purple-600 print:shadow-none">
-                <div className="text-sm font-semibold mb-2">
+              <div className="rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 p-5 text-white shadow-lg print:bg-purple-600 print:shadow-none">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide">
                   Total Records
                 </div>
                 <div className="text-4xl font-bold">
                   {reportData.totalRecords}
                 </div>
               </div>
-              <div className="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-xl p-6 shadow-lg print:bg-green-600 print:shadow-none">
-                <div className="text-sm font-semibold mb-2">
+              <div className="rounded-xl bg-gradient-to-br from-green-500 to-green-600 p-5 text-white shadow-lg print:bg-green-600 print:shadow-none">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide">
                   Attendance Rate
                 </div>
                 <div className="text-4xl font-bold">
                   {reportData.attendanceRate.toFixed(1)}%
                 </div>
               </div>
+              <div className="rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 p-5 text-white shadow-lg print:bg-orange-600 print:shadow-none">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide">
+                  Identifying as ATSI
+                </div>
+                <div className="text-4xl font-bold">
+                  {reportData.atsiCount}
+                </div>
+              </div>
+              <div className="rounded-xl bg-gradient-to-br from-pink-500 to-pink-600 p-5 text-white shadow-lg print:bg-pink-600 print:shadow-none">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide">
+                  Identifying as CALD
+                </div>
+                <div className="text-4xl font-bold">
+                  {reportData.caldCount}
+                </div>
+              </div>
             </div>
 
-            {/* Charts */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 print:mb-4 print:gap-4">
-              {/* Age Distribution */}
-              <div className="border border-gray-200 rounded-xl p-4 print:p-3 print:border-gray-300">
-                <h3 className="text-xl font-bold text-gray-900 mb-3 print:mb-2 print:text-lg text-left pl-2">
+            {/* Charts Row 1: Age & Gender */}
+            <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2 print:mb-4 print:gap-4">
+              <div className="rounded-xl border border-gray-200 p-4 print:border-gray-300 print:p-3">
+                <h3 className="mb-3 pl-2 text-left text-xl font-bold text-gray-900 print:mb-2 print:text-lg">
                   Age Distribution
                 </h3>
                 {reportData.ageDistribution.length > 0 ? (
@@ -1152,15 +1380,13 @@ export default function Reports() {
                     reportData.ageDistribution,
                   )
                 ) : (
-                  <div className="text-center text-gray-500 py-8">
+                  <div className="py-8 text-center text-gray-500">
                     No data available
                   </div>
                 )}
               </div>
-
-              {/* Gender Distribution */}
-              <div className="border border-gray-200 rounded-xl p-4 print:p-3 print:border-gray-300">
-                <h3 className="text-xl font-bold text-gray-900 mb-3 print:mb-2 print:text-lg text-left pl-2">
+              <div className="rounded-xl border border-gray-200 p-4 print:border-gray-300 print:p-3">
+                <h3 className="mb-3 pl-2 text-left text-xl font-bold text-gray-900 print:mb-2 print:text-lg">
                   Gender Distribution
                 </h3>
                 {reportData.genderDistribution.length > 0 ? (
@@ -1168,7 +1394,72 @@ export default function Reports() {
                     reportData.genderDistribution,
                   )
                 ) : (
-                  <div className="text-center text-gray-500 py-8">
+                  <div className="py-8 text-center text-gray-500">
+                    No data available
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Charts Row 2: Council & Township */}
+            <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2 print:mb-4 print:gap-4">
+              <div className="rounded-xl border border-gray-200 p-4 print:border-gray-300 print:p-3">
+                <h3 className="mb-3 pl-2 text-left text-xl font-bold text-gray-900 print:mb-2 print:text-lg">
+                  Council Areas
+                </h3>
+                {reportData.councilDistribution.length > 0 ? (
+                  renderCenteredPieChart(
+                    reportData.councilDistribution,
+                  )
+                ) : (
+                  <div className="py-8 text-center text-gray-500">
+                    No data available
+                  </div>
+                )}
+              </div>
+              <div className="rounded-xl border border-gray-200 p-4 print:border-gray-300 print:p-3">
+                <h3 className="mb-3 pl-2 text-left text-xl font-bold text-gray-900 print:mb-2 print:text-lg">
+                  Townships
+                </h3>
+                {reportData.townshipDistribution.length > 0 ? (
+                  renderCenteredPieChart(
+                    reportData.townshipDistribution,
+                  )
+                ) : (
+                  <div className="py-8 text-center text-gray-500">
+                    No data available
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Charts Row 3: How Did You Hear & Disability */}
+            <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2 print:mb-4 print:gap-4">
+              <div className="rounded-xl border border-gray-200 p-4 print:border-gray-300 print:p-3">
+                <h3 className="mb-3 pl-2 text-left text-xl font-bold text-gray-900 print:mb-2 print:text-lg">
+                  How Participants Found The Hut
+                </h3>
+                {reportData.referralDistribution.length > 0 ? (
+                  renderCenteredPieChart(
+                    reportData.referralDistribution,
+                  )
+                ) : (
+                  <div className="py-8 text-center text-gray-500">
+                    No data available
+                  </div>
+                )}
+              </div>
+              <div className="rounded-xl border border-gray-200 p-4 print:border-gray-300 print:p-3">
+                <h3 className="mb-3 pl-2 text-left text-xl font-bold text-gray-900 print:mb-2 print:text-lg">
+                  Disability / Additional Requirements
+                </h3>
+                {reportData.disabilityDistribution.length >
+                0 ? (
+                  renderCenteredPieChart(
+                    reportData.disabilityDistribution,
+                  )
+                ) : (
+                  <div className="py-8 text-center text-gray-500">
                     No data available
                   </div>
                 )}
@@ -1176,27 +1467,30 @@ export default function Reports() {
             </div>
 
             {/* Program Data Table */}
-            <div className="border border-gray-200 rounded-xl p-6 print:p-4 print:border-gray-300 print:break-before-page">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">
+            <div className="mb-6 rounded-xl border border-gray-200 p-6 print:break-before-page print:border-gray-300 print:p-4">
+              <h3 className="mb-4 text-xl font-bold text-gray-900">
                 Program Details
               </h3>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b-2 border-gray-200">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-900">
+                      <th className="py-3 px-4 text-left font-semibold text-gray-900">
                         Program
                       </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-900">
+                      <th className="py-3 px-4 text-left font-semibold text-gray-900">
                         Category
                       </th>
-                      <th className="text-right py-3 px-4 font-semibold text-gray-900">
+                      <th className="py-3 px-4 text-right font-semibold text-gray-900">
+                        Sessions Held
+                      </th>
+                      <th className="py-3 px-4 text-right font-semibold text-gray-900">
                         Unique Participants
                       </th>
-                      <th className="text-right py-3 px-4 font-semibold text-gray-900">
+                      <th className="py-3 px-4 text-right font-semibold text-gray-900">
                         Attendances
                       </th>
-                      <th className="text-right py-3 px-4 font-semibold text-gray-900">
+                      <th className="py-3 px-4 text-right font-semibold text-gray-900">
                         Attendance Rate
                       </th>
                     </tr>
@@ -1215,13 +1509,16 @@ export default function Reports() {
                             <td className="py-3 px-4">
                               {prog.category}
                             </td>
-                            <td className="text-right py-3 px-4">
+                            <td className="py-3 px-4 text-right">
+                              {prog.sessionsHeld}
+                            </td>
+                            <td className="py-3 px-4 text-right">
                               {prog.uniqueParticipants}
                             </td>
-                            <td className="text-right py-3 px-4">
+                            <td className="py-3 px-4 text-right">
                               {prog.attendances}
                             </td>
-                            <td className="text-right py-3 px-4">
+                            <td className="py-3 px-4 text-right">
                               {prog.attendanceRate.toFixed(1)}%
                             </td>
                           </tr>
@@ -1230,8 +1527,8 @@ export default function Reports() {
                     ) : (
                       <tr>
                         <td
-                          colSpan={5}
-                          className="text-center py-8 text-gray-500"
+                          colSpan={6}
+                          className="py-8 text-center text-gray-500"
                         >
                           No program data available for the
                           selected filters
@@ -1240,6 +1537,73 @@ export default function Reports() {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+            {/* Participants List: Active & Inactive */}
+            <div className="rounded-xl border border-gray-200 p-6 print:border-gray-300 print:p-4">
+              <h3 className="mb-4 text-xl font-bold text-gray-900">
+                Participants
+              </h3>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {/* Active */}
+                <div>
+                  <div className="mb-3 flex items-center gap-2">
+                    <span className="inline-block h-3 w-3 rounded-full bg-green-500"></span>
+                    <h4 className="font-semibold text-gray-800">
+                      Active (
+                      {reportData.activeParticipants.length})
+                    </h4>
+                  </div>
+                  {reportData.activeParticipants.length > 0 ? (
+                    <ul className="divide-y divide-gray-100 rounded-lg border border-gray-100">
+                      {reportData.activeParticipants.map(
+                        (p, idx) => (
+                          <li
+                            key={idx}
+                            className="px-4 py-2 text-sm text-gray-800"
+                          >
+                            {p.name}
+                          </li>
+                        ),
+                      )}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-gray-500">
+                      No active participants
+                    </p>
+                  )}
+                </div>
+
+                {/* Inactive */}
+                <div>
+                  <div className="mb-3 flex items-center gap-2">
+                    <span className="inline-block h-3 w-3 rounded-full bg-gray-400"></span>
+                    <h4 className="font-semibold text-gray-800">
+                      Inactive (
+                      {reportData.inactiveParticipants.length})
+                    </h4>
+                  </div>
+                  {reportData.inactiveParticipants.length >
+                  0 ? (
+                    <ul className="divide-y divide-gray-100 rounded-lg border border-gray-100">
+                      {reportData.inactiveParticipants.map(
+                        (p, idx) => (
+                          <li
+                            key={idx}
+                            className="px-4 py-2 text-sm text-gray-500"
+                          >
+                            {p.name}
+                          </li>
+                        ),
+                      )}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-gray-500">
+                      No inactive participants
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
