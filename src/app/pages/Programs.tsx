@@ -40,6 +40,7 @@ interface User {
 
 interface ProgramWithEnrollment extends Program {
   enrollment_count?: number;
+  inactive_count?: number;
 }
 
 interface ProgramParticipant {
@@ -105,14 +106,22 @@ export default function Programs() {
       // Fetch enrollment counts for all programs
       const programsWithCounts = await Promise.all(
         (data || []).map(async (program) => {
-          const { count } = await supabase
+          const { count: activeCount } = await supabase
             .from('program_enrollments')
             .select('*', { count: 'exact', head: true })
-            .eq('program_id', program.id);
+            .eq('program_id', program.id)
+            .eq('is_active', true);
+
+          const { count: inactiveCount } = await supabase
+            .from('program_enrollments')
+            .select('*', { count: 'exact', head: true })
+            .eq('program_id', program.id)
+            .eq('is_active', false);
 
           return {
             ...program,
-            enrollment_count: count || 0
+            enrollment_count: activeCount || 0,
+            inactive_count: inactiveCount || 0
           };
         })
       );
@@ -199,13 +208,13 @@ export default function Programs() {
           id,
           participant_id,
           enrolled_at,
+          is_active,
           participants:participant_id (
             id,
             first_name,
             last_name,
             phone,
-            email,
-            is_active
+            email
           )
         `)
         .eq('program_id', programId)
@@ -704,6 +713,11 @@ export default function Programs() {
                           <span className="text-sm font-semibold text-blue-700">
                             Remaining: {remaining} {remaining === 0 && '(Full)'}
                           </span>
+                          {(program.inactive_count || 0) > 0 && (
+                            <span className="text-sm font-semibold text-gray-500">
+                              Inactive: {program.inactive_count}
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -1323,7 +1337,10 @@ export default function Programs() {
                 <div className="space-y-3">
                   <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200 mb-4">
                     <p className="text-lg font-bold text-blue-900">
-                      Total Participants: {programParticipants.length} / {selectedProgram.capacity}
+                      Active Participants: {programParticipants.filter((e: any) => e.is_active).length} / {selectedProgram.capacity}
+                    </p>
+                    <p className="text-sm text-blue-700 mt-1">
+                      Total enrolled (including inactive): {programParticipants.length}
                     </p>
                   </div>
 
@@ -1354,12 +1371,12 @@ export default function Programs() {
                               <td className="px-4 py-3 text-base text-gray-700">{participant.phone || 'N/A'}</td>
                               <td className="px-4 py-3 text-base text-gray-700">{participant.email || 'N/A'}</td>
                               <td className="px-4 py-3">
-                                {participant.is_active ? (
+                                {enrollment.is_active ? (
                                   <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-bold">
                                     Active
                                   </span>
                                 ) : (
-                                  <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm font-bold">
+                                  <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm font-bold">
                                     Inactive
                                   </span>
                                 )}

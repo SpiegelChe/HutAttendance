@@ -139,7 +139,7 @@ export default function Attendance() {
   const fetchProgramParticipants = async (programId: string) => {
     setLoading(true);
     try {
-      // Fetch participants enrolled in this program
+      // Fetch only active participants enrolled in this program
       const { data, error } = await supabase
         .from('program_enrollments')
         .select(`
@@ -162,7 +162,8 @@ export default function Attendance() {
             program_specific_data
           )
         `)
-        .eq('program_id', programId);
+        .eq('program_id', programId)
+        .eq('is_active', true);
 
       if (error) throw error;
 
