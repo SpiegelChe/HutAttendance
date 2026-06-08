@@ -14,17 +14,31 @@ interface EnrolledParticipant {
   [key: string]: any;
 }
 
+// Attendance marking page — the most frequently used feature for all roles.
+//
+// Flow:
+//   1. User picks a date.
+//   2. Programs that run on that day-of-week are filtered and shown.
+//   3. User selects a program to load its enrolled participants.
+//   4. Each participant's checkbox defaults to "absent"; checking marks them present.
+//   5. Submitting writes one attendance_record row per participant (present or absent).
+//
+// Staff only see programs they are assigned to; managers and admins see all programs.
 export default function Attendance() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [selectedProgram, setSelectedProgram] = useState('');
+  // Defaults to today's date in ISO format (YYYY-MM-DD) for the date input.
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  // Keyed by participant ID; true = present, absent if key is missing or false.
   const [attendance, setAttendance] = useState<Record<string, boolean>>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [programs, setPrograms] = useState<Program[]>([]);
+  // Subset of programs whose scheduled day(s) match the selected date.
   const [programsForSelectedDate, setProgramsForSelectedDate] = useState<Program[]>([]);
   const [programParticipants, setProgramParticipants] = useState<EnrolledParticipant[]>([]);
   const [loading, setLoading] = useState(false);
+  // Holds the participant whose detail popup is open; null when closed.
   const [detailsParticipant, setDetailsParticipant] = useState<EnrolledParticipant | null>(null);
 
   // Get day of week for a given date (0-6, where 0 is Sunday)
@@ -72,6 +86,8 @@ export default function Attendance() {
     }
   }, [date, programs]);
 
+  // Filters the full program list to only those scheduled on the chosen date's
+  // day of week, so staff aren't presented with irrelevant programs.
   const filterProgramsByDate = (selectedDate: string) => {
     const dayOfWeek = getDayOfWeek(selectedDate);
     const filteredPrograms = programs.filter(program =>
@@ -180,6 +196,8 @@ export default function Attendance() {
     }
   };
 
+  // Flips the present/absent status for a single participant without
+  // resetting the rest of the attendance object.
   const handleToggleAttendance = (participantId: string) => {
     setAttendance(prev => ({
       ...prev,
@@ -189,7 +207,8 @@ export default function Attendance() {
 
   const handleSubmit = async () => {
     try {
-      // Save attendance record for ALL participants in the program
+      // Every enrolled participant gets a record — either "present" or "absent".
+      // This ensures the absence of a row cannot be confused with "not recorded".
       const attendanceRecords = programParticipants.map((participant) => ({
         program_id: selectedProgram,
         participant_id: participant.id,
@@ -222,6 +241,10 @@ export default function Attendance() {
 
   const selectedProgramName = programs.find(p => p.id === selectedProgram)?.name;
 
+  // Program category lists control which extra data sections appear in the
+  // participant detail popup — children's programs show child info (school,
+  // authorised pick-up persons, custody notes) while fitness programs show
+  // health declaration and medical condition details.
   const CHILDREN_PROGRAMS = ['Outdoor Playgroup', 'Homework Club', 'Dungeons & Dragons', 'Intergenerational Mentoring'];
   const FITNESS_PROGRAMS = ['Community Fun Fitness', 'Strength & Balance (Stirling)', 'Chi Kung', 'Walking Group', "Men's Moves"];
 

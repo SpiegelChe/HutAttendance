@@ -17,13 +17,24 @@ import {
   ProgramSpecificStep
 } from '../components/registration/RegistrationSteps';
 
+// Multi-step participant registration form (3 steps):
+//   Step 1 — General info: personal details, address, emergency contact, cultural background
+//   Step 2 — Program selection: pick one or more programs to enrol in
+//   Step 3 — Program-specific data: health info for fitness programs,
+//             child details for children's programs
+//
+// On submit, two database writes happen in sequence:
+//   1. Insert into `participants`
+//   2. Insert into `program_enrollments` for each selected program
 export default function AddParticipantMultiStep() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [showSuccess, setShowSuccess] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
+  // Flat form state for all three steps — kept in one object so data persists
+  // when navigating back and forward between steps.
   const [formData, setFormData] = useState({
     // Personal Information
     title: '',
@@ -98,10 +109,14 @@ export default function AddParticipantMultiStep() {
 
   const totalSteps = 3;
 
+  // Generic field updater passed down to each step component so they don't
+  // need their own state — all changes bubble up to this single formData object.
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Toggles a program ID in/out of the selectedPrograms array.
+  // selectedPrograms stores program UUIDs (not names) for use in DB inserts.
   const handleProgramToggle = (programName: string) => {
     setFormData(prev => ({
       ...prev,
@@ -111,6 +126,9 @@ export default function AddParticipantMultiStep() {
     }));
   };
 
+  // Updates a nested field inside programSpecificData under a category key
+  // ('children' or 'fitness'). This keeps program-specific data namespaced so
+  // fields from different categories don't collide.
   const handleProgramDataChange = (categoryKey: string, field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
@@ -349,7 +367,10 @@ export default function AddParticipantMultiStep() {
       const participantAge = calculateAge(formData.dobDay, formData.dobMonth, formData.dobYear);
       const participantAgeRange = getAgeRange(participantAge);
 
-      // Build referral sources array
+      // Age and age range are calculated for reporting but NOT persisted —
+      // they are derived on demand from date_of_birth to avoid stale data.
+
+      // Convert the individual referral checkboxes into a JSON array for storage.
       const referralSources = [];
       if (formData.referralBrochure) referralSources.push('Brochure');
       if (formData.referralReferral) referralSources.push('Referral');

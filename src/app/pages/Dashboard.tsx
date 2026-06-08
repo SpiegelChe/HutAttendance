@@ -3,27 +3,33 @@ import { Layout } from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { ClipboardCheck, UserPlus, UserCheck, Search, BarChart3, GraduationCap, FolderOpen } from 'lucide-react';
 
+// Main dashboard page — the landing screen after login.
+// Shows a grid of action tiles, each navigating to a specific feature.
+// Tiles are conditionally rendered based on the user's role so staff only
+// see what they are permitted to use.
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Check if user can access a feature based on their role
+  // Role-based access control for dashboard tiles.
+  // This mirrors the server-side RLS policies in Supabase — it is a UI
+  // convenience only, not a security boundary.
   const canAccess = (feature: string) => {
-    // Everyone can access Mark Attendance and Staff Training
+    // All roles can mark attendance and view training materials.
     if (feature === 'attendance' || feature === 'training') {
       return true;
     }
-    
-    // Manager and Admin can access Register Participant and Add to Program
+
+    // Managers and admins can register participants and enrol them in programs.
     if (feature === 'add-participant' || feature === 'add-to-program') {
       return user?.role === 'manager' || user?.role === 'admin';
     }
-    
-    // Only Admin can access Search, Programs, and Reports
+
+    // Search, program management, and reports are restricted to admins.
     if (feature === 'search' || feature === 'programs' || feature === 'reports') {
       return user?.role === 'admin';
     }
-    
+
     return false;
   };
 

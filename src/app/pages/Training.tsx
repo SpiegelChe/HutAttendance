@@ -1,3 +1,11 @@
+/**
+ * Staff Training page.
+ *
+ * This component renders the training hub and the full-screen guided walkthroughs.
+ * The walkthroughs use mock versions of portal pages, blue highlight overlays,
+ * and step-by-step instruction cards to teach staff how each module works.
+ */
+
 import {
   CSSProperties,
   useEffect,
@@ -41,6 +49,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import logo from "figma:asset/c717e59cf8f32fe25477e30d5de63135f3057cc8.png";
 
+// Defines one training card and the ordered steps shown in its walkthrough.
 interface TrainingModule {
   id: string;
   title: string;
@@ -51,6 +60,7 @@ interface TrainingModule {
   steps: TrainingStep[];
 }
 
+// All possible UI regions that a walkthrough step can highlight.
 type HighlightTarget =
   | "logo"
   | "logout"
@@ -93,6 +103,7 @@ type HighlightTarget =
   | "programs-edit-delete"
   | "programs-manage-staff";
 
+// A single instruction step inside a training module.
 interface TrainingStep {
   stepNumber: number | string;
   title: string;
@@ -108,6 +119,7 @@ interface TrainingStep {
   };
 }
 
+// Runtime rectangle used when one step needs to highlight one or more areas.
 interface OverlayRect {
   top: number;
   left: number;
@@ -116,6 +128,7 @@ interface OverlayRect {
   borderRadius?: number;
 }
 
+// Static dashboard card data used by the Staff Portal Basics mock page.
 const dashboardCardMocks = [
   {
     title: "Mark\nAttendance",
@@ -162,6 +175,7 @@ const dashboardCardMocks = [
   },
 ];
 
+// Static summary cards used by the dashboard mock page.
 const statsMocks = [
   {
     title: "Total Participants",
@@ -180,6 +194,7 @@ const statsMocks = [
   },
 ];
 
+// Sidebar labels used to simulate the real portal navigation.
 const sidebarItemMocks = [
   "Home",
   "Mark Attendance",
@@ -192,14 +207,23 @@ const sidebarItemMocks = [
 ];
 
 export default function Training() {
+  // Router navigation is used by the "Open page" buttons.
   const navigate = useNavigate();
+
+  // Current user role controls which training modules are visible.
   const { user } = useAuth();
+  // activeModule switches the page from the training hub into walkthrough mode.
   const [activeModule, setActiveModule] =
     useState<TrainingModule | null>(null);
+
+  // currentStep stores the index of the active instruction inside the selected module.
   const [currentStep, setCurrentStep] = useState(0);
+
+  // Scroll container for the full-screen walkthrough overlay.
   const walkthroughScrollRef = useRef<HTMLDivElement | null>(
     null,
   );
+  // Staff Portal Basics mock-page refs used for live highlight positioning.
   const basicsCanvasRef = useRef<HTMLDivElement | null>(null);
   const basicsLogoRef = useRef<HTMLImageElement | null>(null);
   const basicsLogoutRef = useRef<HTMLButtonElement | null>(
@@ -209,6 +233,7 @@ export default function Training() {
   const basicsCardsRef = useRef<HTMLDivElement | null>(null);
   const [basicsHighlightStyle, setBasicsHighlightStyle] =
     useState<CSSProperties | null>(null);
+  // View Reports mock-page refs used for live highlight positioning.
   const reportsCanvasRef = useRef<HTMLDivElement | null>(null);
   const reportsPeriodRef = useRef<HTMLDivElement | null>(null);
   const reportsProgramRef = useRef<HTMLDivElement | null>(null);
@@ -219,6 +244,7 @@ export default function Training() {
   const reportsExportRef = useRef<HTMLDivElement | null>(null);
   const [reportsHighlightStyle, setReportsHighlightStyle] =
     useState<CSSProperties | null>(null);
+  // Mark Attendance mock-page refs used for live highlight positioning.
   const attendanceCanvasRef = useRef<HTMLDivElement | null>(
     null,
   );
@@ -233,6 +259,7 @@ export default function Training() {
     attendanceHighlightStyle,
     setAttendanceHighlightStyle,
   ] = useState<CSSProperties | null>(null);
+  // Add New Participant mock-page refs used for multi-section form highlights.
   const addParticipantCanvasRef = useRef<HTMLDivElement | null>(
     null,
   );
@@ -259,6 +286,7 @@ export default function Training() {
     addParticipantHighlightStyle,
     setAddParticipantHighlightStyle,
   ] = useState<CSSProperties | null>(null);
+  // Add to Program mock-page refs used for search/list/detail highlights.
   const addToProgramCanvasRef = useRef<HTMLDivElement | null>(
     null,
   );
@@ -275,6 +303,7 @@ export default function Training() {
     addToProgramHighlightStyle,
     setAddToProgramHighlightStyle,
   ] = useState<CSSProperties | null>(null);
+  // Find Participant mock-page refs used across search results and profile views.
   const searchTrainingCanvasRef = useRef<HTMLDivElement | null>(
     null,
   );
@@ -300,6 +329,7 @@ export default function Training() {
     searchTrainingHighlightStyle,
     setSearchTrainingHighlightStyle,
   ] = useState<CSSProperties | null>(null);
+  // Manage Programs mock-page refs. Some steps highlight multiple separate areas.
   const programsCanvasRef = useRef<HTMLDivElement | null>(null);
   const programsAddModalRef = useRef<HTMLDivElement | null>(
     null,
@@ -329,7 +359,8 @@ export default function Training() {
   const [programsOverlayRects, setProgramsOverlayRects] =
     useState<OverlayRect[]>([]);
 
-  // Define all training modules
+  // Central training configuration.
+  // To add or edit training content, update the module metadata and its steps here.
   const allTrainingModules: TrainingModule[] = [
     {
       id: "basics",
@@ -660,31 +691,41 @@ export default function Training() {
     },
   ];
 
-  // Filter training modules based on user role
+  // Role-based visibility for training cards.
+  // This only controls what training options are shown on this page.
   const canAccessModule = (moduleId: string) => {
     // Everyone can access basics and attendance
-    if (moduleId === 'basics' || moduleId === 'attendance') {
+    if (moduleId === "basics" || moduleId === "attendance") {
       return true;
     }
 
     // Manager and Admin can access add-participant and add-to-program
-    if (moduleId === 'add-participant' || moduleId === 'add-to-program') {
-      return user?.role === 'manager' || user?.role === 'admin';
+    if (
+      moduleId === "add-participant" ||
+      moduleId === "add-to-program"
+    ) {
+      return user?.role === "manager" || user?.role === "admin";
     }
 
     // Only Admin can access search, reports, and programs
-    if (moduleId === 'search' || moduleId === 'reports' || moduleId === 'programs') {
-      return user?.role === 'admin';
+    if (
+      moduleId === "search" ||
+      moduleId === "reports" ||
+      moduleId === "programs"
+    ) {
+      return user?.role === "admin";
     }
 
     return false;
   };
 
-  // Filter modules based on role
-  const trainingModules = allTrainingModules.filter(module =>
-    canAccessModule(module.id)
+  // Final list displayed to the current user after role filtering.
+  const trainingModules = allTrainingModules.filter((module) =>
+    canAccessModule(module.id),
   );
 
+  // Recalculate highlight overlays whenever the selected module or step changes.
+  // The calculation also runs on resize/scroll so the highlight follows the mock content.
   useEffect(() => {
     if (!activeModule) {
       setBasicsHighlightStyle(null);
@@ -698,10 +739,13 @@ export default function Training() {
       return;
     }
 
+    // Measures the current target element and converts it into absolute overlay styles.
     const updateHighlight = () => {
       const target =
         activeModule.steps[currentStep]?.highlightTarget;
 
+      // Manage Programs supports multiple highlight rectangles in one step,
+      // so it uses SVG masking instead of a single div overlay.
       if (activeModule.id === "programs") {
         const canvas = programsCanvasRef.current;
         if (!canvas || !target) return;
@@ -769,6 +813,7 @@ export default function Training() {
         return;
       }
 
+      // Staff Portal Basics uses measured positions for logo, logout, sidebar and cards.
       if (activeModule.id === "basics") {
         const paddingByTarget: Partial<
           Record<HighlightTarget, number>
@@ -814,6 +859,7 @@ export default function Training() {
         return;
       }
 
+      // Reports highlights are calculated from the filter, preview and export refs.
       if (activeModule.id === "reports") {
         const getTargetElement = () => {
           if (target === "reports-period")
@@ -852,6 +898,7 @@ export default function Training() {
         return;
       }
 
+      // Attendance highlights follow the date, selection and participant list sections.
       if (activeModule.id === "attendance") {
         const paddingByTarget: Partial<
           Record<HighlightTarget, number>
@@ -895,6 +942,7 @@ export default function Training() {
         return;
       }
 
+      // Add New Participant highlights each major section of the multi-step form.
       if (activeModule.id === "add-participant") {
         const paddingByTarget: Partial<
           Record<HighlightTarget, number>
@@ -958,6 +1006,7 @@ export default function Training() {
         return;
       }
 
+      // Add to Program highlights the participant search, result list and enrolment area.
       if (activeModule.id === "add-to-program") {
         const paddingByTarget: Partial<
           Record<HighlightTarget, number>
@@ -1001,6 +1050,7 @@ export default function Training() {
         return;
       }
 
+      // Find Participant highlights both the search result view and the profile detail view.
       if (activeModule.id === "search") {
         const paddingByTarget: Partial<
           Record<HighlightTarget, number>
@@ -1085,15 +1135,18 @@ export default function Training() {
     };
   }, [activeModule, currentStep]);
 
+  // Opens a walkthrough from step 1.
   const handleStartWalkthrough = (module: TrainingModule) => {
     setActiveModule(module);
     setCurrentStep(0);
   };
 
+  // Opens the real portal page associated with the selected module.
   const handleOpenPage = (route: string) => {
     navigate(route);
   };
 
+  // Move forward one step if this is not the final instruction.
   const handleNext = () => {
     if (
       activeModule &&
@@ -1103,17 +1156,20 @@ export default function Training() {
     }
   };
 
+  // Move back one step if this is not the first instruction.
   const handlePrevious = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     }
   };
 
+  // Closes the walkthrough and returns to the training hub.
   const handleFinish = () => {
     setActiveModule(null);
     setCurrentStep(0);
   };
 
+  // Maps module color names to Tailwind gradient, text and hover classes.
   const getColorClasses = (color: string) => {
     const colorMap: Record<
       string,
@@ -1177,6 +1233,8 @@ export default function Training() {
     return colorMap[color] || colorMap.gray;
   };
 
+  // Returns the active highlight style.
+  // Runtime-measured styles are preferred; static fallbacks keep the UI usable before refs are measured.
   const getHighlightStyles = (
     target: HighlightTarget,
     moduleId?: string,
@@ -1805,6 +1863,7 @@ export default function Training() {
     return highlights[target];
   };
 
+  // Keeps a calculated coordinate inside the visible mock canvas.
   const clampValue = (
     value: number,
     min: number,
@@ -1814,6 +1873,7 @@ export default function Training() {
     return Math.min(Math.max(value, min), max);
   };
 
+  // Converts a CSSProperties highlight object into numeric rectangle coordinates.
   const getRectFromStyle = (style?: CSSProperties | null) => {
     const parsePx = (value?: string | number) => {
       if (typeof value === "number") return value;
@@ -1837,6 +1897,8 @@ export default function Training() {
     };
   };
 
+  // Finds a textbox position close to the highlighted area while avoiding overlap.
+  // Candidate positions are scored by overlap, distance and preferred side order.
   const getSmartTextboxPosition = ({
     highlightStyle,
     canvas,
@@ -1941,6 +2003,8 @@ export default function Training() {
     };
   };
 
+  // Returns the instruction card position for each step.
+  // Module-specific smart positioning is used first, then static fallbacks are used.
   const getTextboxPosition = (
     target: HighlightTarget,
     moduleId?: string,
@@ -1962,7 +2026,7 @@ export default function Training() {
           basicsHighlightStyle.height,
         );
         const gap = 16;
-        const boxWidth = 460; // 原来 900，缩短约一半
+        const boxWidth = 460; // About half of the previous 900px width.
 
         return {
           position: "absolute",
@@ -1986,7 +2050,7 @@ export default function Training() {
           basicsHighlightStyle.height,
         );
         const gap = 16;
-        const boxWidth = 520; // 原来 1040，缩短约一半
+        const boxWidth = 520; // About half of the previous 1040px width.
         const left = Math.max(
           24,
           highlightLeft + highlightWidth - boxWidth,
@@ -2011,7 +2075,7 @@ export default function Training() {
           basicsHighlightStyle.width,
         );
         const gap = 20;
-        const boxWidth = 420; // 原来 820，缩短约一半
+        const boxWidth = 420; // About half of the previous 820px width.
 
         return {
           position: "absolute",
@@ -2730,6 +2794,7 @@ export default function Training() {
     );
   };
 
+  // Mock dashboard used by the Staff Portal Basics walkthrough.
   const renderPortalBasicsMock = () => {
     return (
       <div
@@ -2863,6 +2928,7 @@ export default function Training() {
     );
   };
 
+  // Mock Mark Attendance page used inside the walkthrough overlay.
   const renderAttendanceMockPage = () => {
     const fieldWrap = "space-y-3";
     const fieldClass =
@@ -3055,6 +3121,7 @@ export default function Training() {
     );
   };
 
+  // Mock Add to Program page showing search, participant selection and enrolment controls.
   const renderAddToProgramMockPage = () => {
     const participants = [
       {
@@ -3258,6 +3325,7 @@ export default function Training() {
     );
   };
 
+  // Mock View Reports page showing report filters, preview output and export controls.
   const renderReportsMockPage = () => {
     const fieldWrap = "space-y-3";
     const fieldClass =
@@ -3511,6 +3579,7 @@ export default function Training() {
     );
   };
 
+  // Mock Add New Participant page. The content changes between general info, program selection and program details.
   const renderAddParticipantMockPage = (
     currentTarget: HighlightTarget,
   ) => {
@@ -4111,6 +4180,7 @@ export default function Training() {
     );
   };
 
+  // Mock Find Participant page. Earlier steps show search results; later steps show profile details.
   const renderSearchParticipantMockPage = (
     currentTarget: HighlightTarget,
   ) => {
@@ -4674,6 +4744,7 @@ export default function Training() {
     );
   };
 
+  // Mock Manage Programs page with add/edit/delete and staff assignment examples.
   const renderProgramsMockPage = (
     currentTarget: HighlightTarget,
   ) => {
@@ -5064,6 +5135,7 @@ export default function Training() {
     );
   };
 
+  // Generic fallback mock page for any future module without a custom mock yet.
   const renderGenericMockPage = () => {
     return (
       <div className="absolute inset-0 pointer-events-none">
@@ -5086,6 +5158,7 @@ export default function Training() {
     );
   };
 
+  // Walkthrough mode: render the selected mock page, highlight overlay and instruction textbox.
   if (activeModule) {
     const currentStepData = activeModule.steps[currentStep];
     const isFirstStep = currentStep === 0;
@@ -5095,6 +5168,7 @@ export default function Training() {
       currentStepData.highlightTarget,
       activeModule.id,
     );
+    // Each mock page has a different scroll height so the highlight and textbox have room to appear.
     const walkthroughHeight =
       activeModule.id === "basics"
         ? "min-h-[2000px]"
@@ -5133,6 +5207,7 @@ export default function Training() {
         className="fixed inset-0 z-50 overflow-y-auto bg-slate-100"
       >
         <div className={`relative w-full ${walkthroughHeight}`}>
+          {/* Render the mock page that matches the selected training module. */}
           <div className="absolute inset-0">
             {activeModule.id === "basics"
               ? renderPortalBasicsMock()
@@ -5157,6 +5232,7 @@ export default function Training() {
                           : renderGenericMockPage()}
           </div>
 
+          {/* Manage Programs can highlight several separate regions at the same time. */}
           {activeModule.id === "programs" &&
           programsOverlayRects.length > 0 ? (
             <svg className="absolute inset-0 z-20 h-full w-full pointer-events-none overflow-visible">
@@ -5216,6 +5292,7 @@ export default function Training() {
             />
           )}
 
+          {/* Instruction textbox for the current walkthrough step. */}
           <div
             style={{ ...textboxStyle, height: "auto" }}
             className="z-30 rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-slate-200"
@@ -5279,6 +5356,7 @@ export default function Training() {
     );
   }
 
+  // Default hub mode: show only the modules available to the current user role.
   return (
     <Layout title="Staff Training">
       <div className="mx-auto max-w-7xl space-y-8">
@@ -5302,6 +5380,7 @@ export default function Training() {
             Select a module card to start the guided tour.
           </p>
 
+          {/* Feature the first module separately as the main introductory training card. */}
           <div className="mb-6">
             {(() => {
               const module = trainingModules[0];
@@ -5351,6 +5430,7 @@ export default function Training() {
             })()}
           </div>
 
+          {/* Render the remaining accessible modules as responsive cards. */}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
             {trainingModules.slice(1).map((module) => {
               const Icon = module.icon;

@@ -127,6 +127,19 @@ interface ReportData {
   inactiveParticipants: { name: string; status: string }[];
 }
 
+// Reports page — admin-only analytics dashboard for The Hut Community Centre.
+//
+// Data pipeline:
+//   fetchData() pulls all programs, participants, and attendance_records from
+//   Supabase once on mount. All subsequent filtering is done client-side via
+//   the `reportData` useMemo so there is no re-fetching on filter changes.
+//
+// Filters: date range, program category, specific program, age group, gender,
+//   ATSI status, CALD background, council, and township.
+//
+// Export options:
+//   PDF — triggers window.print() so the browser prints the preview section.
+//   Excel (.xlsx) — uses the `xlsx` library to write a multi-sheet workbook.
 export default function Reports() {
   const navigate = useNavigate();
   const reportRef = useRef<HTMLDivElement>(null);
@@ -370,6 +383,8 @@ export default function Reports() {
     return "65+";
   };
 
+  // All report calculations run inside useMemo so they only recompute when
+  // the underlying data or filters change. Avoids redundant work on every render.
   const reportData = useMemo<ReportData>(() => {
     const filteredParticipants = (participants as any[]).filter(
       (p) => {

@@ -4,6 +4,9 @@ import { useAuth } from '../context/AuthContext';
 import { UserCircle, Lock } from 'lucide-react';
 import logo from 'figma:asset/c717e59cf8f32fe25477e30d5de63135f3057cc8.png';
 
+// Login page for The Hut Community Centre participation portal.
+// On successful login, the router's LoginRoute wrapper detects isAuthenticated
+// and navigates to /dashboard — no explicit navigate() call is needed here.
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,8 +23,8 @@ export default function Login() {
     const result = await login(email, password);
 
     if (result.success) {
-      // Navigation will be handled by the auth context and routing
-      // The user object will be available and routes will redirect accordingly
+      // AuthContext updates isAuthenticated, which causes LoginRoute to
+      // redirect to /dashboard automatically — no explicit navigate needed.
     } else {
       setError(result.error || 'Invalid email or password');
       setLoading(false);

@@ -1,3 +1,10 @@
+// Authentication context — provides login/logout state and the current user's
+// profile (including role) to any component in the tree via useAuth().
+//
+// Roles drive feature access across the entire app:
+//   staff   — can mark attendance and view training only
+//   manager — staff permissions + register/enroll participants
+//   admin   — full access including search, reports, and program management
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { supabase, isSupabaseConfigured, Profile } from '../../lib/supabase';
 
@@ -14,13 +21,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<{ name: string; role: 'staff' | 'manager' | 'admin'; id: string; email: string } | null>(null);
+  // loading=true during the initial session check so route guards wait before
+  // rendering or redirecting — prevents a blank flash on page refresh.
   const [loading, setLoading] = useState(true);
 
-  // Check if user is already logged in on mount
+  // On mount, restore the session from Supabase (persisted in localStorage).
+  // This is what keeps users logged in across page refreshes.
   useEffect(() => {
     checkUser();
   }, []);
 
+  // Restores an existing Supabase session and hydrates the user state.
+  // Also enforces the admin-approval gate: unapproved accounts are signed out
+  // immediately so they cannot access protected routes.
   const checkUser = async () => {
     if (!isSupabaseConfigured) {
       setLoading(false);
@@ -29,9 +42,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
-      
+
       if (authUser) {
-        // Fetch profile from profiles table
+        // The profiles table stores app-level data (role, approval status)
+        // separate from Supabase Auth's own user record.
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('*')
@@ -45,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (profile) {
-          // Check if user is approved
+          // Accounts must be approved by an admin before they can log in.
           if (!profile.approved) {
             await supabase.auth.signOut();
             setLoading(false);
@@ -68,13 +82,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Authenticates against Supabase Auth, then fetches the matching profile row.
+  // Returns a typed result object so callers can display user-facing error messages.
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     if (!isSupabaseConfigured) {
       return { success: false, error: 'Supabase is not configured' };
     }
 
     try {
-      // Sign in with Supabase Auth
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -85,7 +100,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data.user) {
-        // Fetch user profile from profiles table
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
@@ -97,7 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (profile) {
-          // Check if user is approved
+          // Block unapproved accounts even if Supabase Auth succeeded.
           if (!profile.approved) {
             await supabase.auth.signOut();
             return { success: false, error: 'Your account is pending approval. Please wait for administrator confirmation.' };
@@ -121,6 +135,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Signs the user out of Supabase and clears local auth state, causing
+  // ProtectedRoute to redirect back to /login on the next render.
   const logout = async () => {
     if (isSupabaseConfigured) {
       await supabase.auth.signOut();
@@ -136,6 +152,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// Convenience hook — throws if called outside an AuthProvider so misconfigured
+// components surface immediately during development.
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {

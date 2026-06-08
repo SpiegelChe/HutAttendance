@@ -57,10 +57,25 @@ interface ProgramParticipant {
   };
 }
 
+// Program management page — admin only.
+//
+// Displays all programs grouped into three categories:
+//   - Children's Programs (e.g. Outdoor Playgroup, Homework Club)
+//   - Fitness & Wellbeing Programs (e.g. Community Fun Fitness, Chi Kung)
+//   - General Programs (everything else)
+//
+// Each program card supports:
+//   - Edit: update name, schedule, capacity, and recurrence type
+//   - Delete: removes the program and all linked enrollments/attendance records
+//   - Manage Staff: assign or remove staff members from a program
+//   - View Participants: see all enrolled participants and their active/inactive status
+//
+// Recurrence types: weekly, fortnightly, monthly (monthly uses week-of-month + day-of-week).
 export default function Programs() {
   const { user } = useAuth();
   const [programs, setPrograms] = useState<ProgramWithEnrollment[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  // Keyed by program ID so each card can look up its own staff list in O(1).
   const [programStaff, setProgramStaff] = useState<Record<string, ProgramStaff[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +83,7 @@ export default function Programs() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
+  // The program currently being edited or whose staff/participants are being viewed.
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
   const [programParticipants, setProgramParticipants] = useState<ProgramParticipant[]>([]);
   const [participantsLoading, setParticipantsLoading] = useState(false);
@@ -387,7 +403,8 @@ export default function Programs() {
     if (!selectedProgram) return;
 
     try {
-      // Check if assignment already exists
+      // Guard against duplicate assignments — Supabase also enforces a unique
+      // constraint (error code 23505) but this check gives a friendlier message.
       const { data: existing } = await supabase
         .from('program_staff')
         .select('id')
@@ -518,7 +535,8 @@ export default function Programs() {
 
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-  // Generate time options in 30-minute intervals
+  // Produces HH:MM strings for every half-hour slot across a 24-hour day,
+  // used to populate the start/end time dropdowns in the add/edit modals.
   const generateTimeOptions = () => {
     const times = [];
     for (let hour = 0; hour < 24; hour++) {
