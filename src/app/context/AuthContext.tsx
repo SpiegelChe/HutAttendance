@@ -117,6 +117,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return { success: false, error: 'Your account is pending approval. Please wait for administrator confirmation.' };
           }
 
+          // Terminate all other active sessions for this account so only
+          // the current login remains valid (single active session per user).
+          await supabase.auth.signOut({ scope: 'others' });
+
           setIsAuthenticated(true);
           setUser({
             id: profile.id,

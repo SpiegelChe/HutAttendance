@@ -1,10 +1,11 @@
-import { 
-  SA_COUNCIL_REGIONS, 
-  ADELAIDE_HILLS_TOWNSHIPS, 
-  DAYS, 
-  MONTHS, 
+import {
+  SA_COUNCIL_REGIONS,
+  TOWNSHIP_NAMES,
+  TOWNSHIP_DATA,
+  DAYS,
+  MONTHS,
   YEARS,
-  COUNTRIES 
+  COUNTRIES
 } from '../../utils/constants';
 import { Check, X, Plus, Trash2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -301,11 +302,23 @@ export function GeneralInfoStep({ formData, handleChange }: GeneralInfoStepProps
             </label>
             <select
               value={formData.township}
-              onChange={(e) => handleChange('township', e.target.value)}
+              onChange={(e) => {
+                const selected = e.target.value;
+                handleChange('township', selected);
+                // Auto-fill postcode and council when a known township is chosen.
+                // Selecting "Other" leaves those fields for manual entry.
+                if (selected && selected !== 'Other' && TOWNSHIP_DATA[selected]) {
+                  handleChange('postCode', TOWNSHIP_DATA[selected].postcode);
+                  handleChange('councilRegion', TOWNSHIP_DATA[selected].council);
+                } else if (!selected) {
+                  handleChange('postCode', '');
+                  handleChange('councilRegion', '');
+                }
+              }}
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
             >
               <option value="">Select township</option>
-              {ADELAIDE_HILLS_TOWNSHIPS.map(township => (
+              {TOWNSHIP_NAMES.map(township => (
                 <option key={township} value={township}>{township}</option>
               ))}
             </select>

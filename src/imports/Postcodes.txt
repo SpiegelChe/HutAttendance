@@ -1,0 +1,143 @@
+Postcodes currently in use	
+Aldgate	5154	Adelaide Hills
+Balhannah	5242	Adelaide Hills
+Basket Range	5138	Adelaide Hills
+Belair	5052	Mitcham
+Birdwood	5234	Adelaide Hills
+Blackwood	5051	Mitcham
+Bridgewater	5155	Adelaide Hills/Mount Barker
+Brukunga	5252	Mount Barker
+Bugle Ranges	5251	Mount Barker
+Charleston	5244	Adelaide Hills
+Coromandel Valley	5051	Onkaparinga
+Crafers	5152	Adelaide Hills
+Flagstaff Hill	5159	Onkaparinga
+Greenhill	5140	Adelaide Hills
+Hahndorf	5245	Mount Barker
+Heathfield	5153	Adelaide Hills
+Ironbank	5153	Adelaide Hills/Ongaparinga
+Kersbrook	5231	Adelaide Hills
+Lenswood	5240	Adelaide Hills
+Littlehampton	5250	Mount Barker
+Lobethal 	5241	Adelaide Hills
+Macclesfield	5153	Mount Barker
+Millswood	5034	Unley
+Mount Barker	5251	Mount Barker
+Mount George	5155	Adelaide Hills
+Mount Pleasant	5235	Barossa 
+Mylor	5153	Adelaide Hills
+Nairne	5252	Mount Barker
+Norton Summit	5136	Adelaide Hills
+Oakbank	5243	Adelaide Hills
+Picadilly	5151	Adelaide Hills
+Seacombe Gardens	5047	Marion
+Stirling	5152	Adelaide Hills
+Summertown	5141	Adelaide Hills
+Uraidla	5142	Adelaide Hills
+Woodside	5244	Adelaide Hills
+
+
+
+
+Postcode should be amended to
+Aldgate	5154	Adelaide Hills
+Ashton	5137	Adelaide Hills
+Balhannah	5242	Adelaide Hills
+Basket Range	5138	Adelaide Hills
+Birdwood	5234	Adelaide Hills
+Bradbury 	5153	Adelaide Hills
+Bridgewater	5155	Adelaide Hils
+Brukunga	5252	Adelaide Hills
+Carey Gully	5144	Adelaide Hils
+Castambul 	5076	Adelaide Hils
+Chain of Ponds	5231	Adelaide Hils
+Charleston	5244	Adelaide Hils
+Cherryville	5134	Adelaide Hils
+Crafers	5152	Adelaide Hils
+Crafers West	5152	Adelaide Hils
+Cuddlee Creek	5232	Adelaide Hills
+Eagle on the Hill	5150	Adelaide Hills
+Forest Range	5139	Adelaide Hills
+Forreston	5233	Adelaide Hills
+Greenhill	5140	Adelaide Hills
+Gumeracha	5233	Adelaide Hills
+Harlestone	5231	Adelaide Hills
+Hay Valley 	5252	Adelaide Hills/Mount Barker
+Heathfield	5153	Adelaide Hills
+Hermitage Estate	5131	Adelaide Hills
+Lower Hermitage	5131	Adelaide Hills
+Upper Hermitage	5131	Adelaide Hills/Tea Tree Gully
+Horsnell Gully	5141	Adelaide Hills
+Houghton	5131	Adelaide Hills/Tea Tree Gully
+Inglewood	5133	Adelaide Hills
+Inverbrackie	5244	Adelaide Hills
+Ironbank 	5153	Adelaide Hills/Onkaparinga
+Kenton Valley	5233	Adelaide Hills
+Kersbrook	5231	Adelaide Hills
+Lenswood	5240	Adelaide Hills
+Lobethal 	5241	Adelaide Hills
+Longwood	5133	Adelaide Hills
+Marble Hill	5137	Adelaide Hills
+Millbrook	5231	Adelaide Hills
+Montacute	5134	Adelaide Hills
+Mount Crawford	5351	Adelaide Hills/Barossa
+Mount George	5155	Adelaide Hills
+Mount Torrens	5244	Adelaide Hills/Mid Murray
+Mylor	5153	Adelaide Hills
+Neudorf	5241	Adelaide Hills
+Norton Summit	5136	Adelaide Hills
+Oakbank	5243	Adelaide Hills
+Paracombe	5132	Adelaide Hills
+Picadilly	5151	Adelaide Hills
+Schoenthal	5241	Adelaide Hills
+Scott Creek	5153	Adelaide Hills
+Springhead	5244	Adelaide Hills
+Stirling	5152	Adelaide Hills
+Summertown	5141	Adelaide Hills
+The Gorge	5232	Adelaide Hills
+Upper Sturt	5156	Adelaide Hills/Mitcham
+Uraidla	5142	Adelaide Hills
+Verdun	5245	Adelaide Hills
+Warren 	5233	Adelaide Hills
+North Woodside	5244	Adelaide Hills
+Woodside	5244	Adelaide Hills
+Biggs Flat	5153	Mount Barker
+Bugle Ranges	5251	Mount Barker
+Dawesley 	5252	Mount Barker
+Dorset Vale 	5157	Mount Barker/Onkaparinga/Adelaide Hills
+Echunga	5153	Mount Barker
+Flaxley	5153	Mount Barker
+Hahndorf	5245	Mount Barker
+Harrogate	5244	Mount Barker
+Kanmantoo	5252	Mount Barker
+Macclesfield	5153	Mount Barker
+Meadows	5201	Mount Barker
+Mount Osmond	5064	Burnside
+Nairne	5232	Mount Barker
+Native Vallley 	5252	Mount Barker
+Paechtown 	5245	Mount Barker
+Petwood	5252	Mount Barker
+Prospect Hill	5201	Mount Barker
+St Ives	5252	Mount Barker
+Wistow	5251	Mount Barker
+Bremer Valley	5254	Mid Murray Council 
+Brown Hill Creek	5062	Mitcham 
+Callington	5254	Murray Bridge
+Cromer	5235	Barossa
+Friedensberg	5235	Barossa
+Gemmells	5255	Alexandrina
+Glenalta	5052	Mitcham
+Hartley Vale	5255	Alexandrina
+Hawthornedene	5051	Mitcham
+Hendryton	5235	Barossa/Mid Murray
+Highercombe	5091	Tea Tree Gully
+Humburg Scrub	5114	Playford
+One Tree Hill	5114	Playford
+Pella	5374	Goyder
+Red Creek	5255	Alexandrina
+Salem	5255	Alexandrina
+Sampson Flat	5114	Playford
+Skye	5072	Burnside
+Springton 	5235	Barossa
+Waterfall Gully	5066	Burnside
+Williamstown	5351	Barossa

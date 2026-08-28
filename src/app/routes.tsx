@@ -5,6 +5,7 @@ import { createBrowserRouter, Navigate, Outlet } from 'react-router';
 import { useAuth, AuthProvider } from './context/AuthContext';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import VolunteerDashboard from './pages/VolunteerDashboard';
 import AddParticipant from './pages/AddParticipant';
@@ -113,6 +114,12 @@ export const router = createBrowserRouter([
       {
         path: '/signup',
         element: <SignUp />,
+      },
+      {
+        // Unprotected — user arrives here directly from the Supabase reset email link.
+        // The page handles its own session verification via onAuthStateChange.
+        path: '/reset-password',
+        element: <ResetPassword />,
       },
       {
         path: '/dashboard',

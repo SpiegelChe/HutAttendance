@@ -1,6 +1,7 @@
 import { ReactNode, useState } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { useAuth } from "../context/AuthContext";
+import { useInactivityLogout } from "../hooks/useInactivityLogout";
 import {
   LogOut,
   Menu,
@@ -16,6 +17,7 @@ import {
   Calendar,
   FileText,
   FolderOpen,
+  Clock,
 } from "lucide-react";
 import logo from "figma:asset/c717e59cf8f32fe25477e30d5de63135f3057cc8.png";
 
@@ -32,7 +34,7 @@ export function Layout({
 }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -40,6 +42,12 @@ export function Layout({
     logout();
     navigate("/login");
   };
+
+  // Auto-logout after 10 minutes of inactivity; warns the user at 9 minutes.
+  const { showWarning, secondsLeft, stayLoggedIn } = useInactivityLogout(
+    handleLogout,
+    isAuthenticated,
+  );
 
   const handleHome = () => {
     if (user?.role === "Participant") {
@@ -376,6 +384,52 @@ export function Layout({
           {children}
         </main>
       </div>
+
+      {/* Inactivity warning overlay — shown 1 minute before auto-logout */}
+      {showWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 w-full max-w-md text-center">
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <Clock className="text-amber-500" size={64} />
+                {/* Pulsing ring to draw attention */}
+                <span className="absolute inset-0 rounded-full animate-ping bg-amber-400 opacity-30" />
+              </div>
+            </div>
+
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+              Still there?
+            </h2>
+            <p className="text-lg md:text-xl text-gray-600 mb-2">
+              You will be logged out automatically due to inactivity in:
+            </p>
+
+            {/* Countdown number — large for senior users */}
+            <p className="text-6xl font-bold text-amber-500 my-6 tabular-nums">
+              {secondsLeft}s
+            </p>
+
+            <p className="text-base text-gray-500 mb-8">
+              Any activity on this page will keep you logged in.
+            </p>
+
+            <div className="space-y-4">
+              <button
+                onClick={stayLoggedIn}
+                className="w-full py-5 text-xl font-bold text-white rounded-xl shadow-lg transition-all hover:scale-105 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+              >
+                Stay Logged In
+              </button>
+              <button
+                onClick={handleLogout}
+                className="w-full py-4 text-lg font-semibold text-red-600 border-2 border-red-300 rounded-xl hover:bg-red-50 transition-colors"
+              >
+                Log Out Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

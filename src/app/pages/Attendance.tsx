@@ -183,10 +183,14 @@ export default function Attendance() {
 
       if (error) throw error;
 
-      // Transform the data to a flat structure
-      const participants = data
+      // Transform the data to a flat structure, sorted alphabetically by last name then first name
+      const participants = (data
         ?.map((enrollment: any) => enrollment.participants)
-        .filter(Boolean) || [];
+        .filter(Boolean) || [])
+        .sort((a: EnrolledParticipant, b: EnrolledParticipant) => {
+          const first = a.first_name.localeCompare(b.first_name, undefined, { sensitivity: 'base' });
+          return first !== 0 ? first : a.last_name.localeCompare(b.last_name, undefined, { sensitivity: 'base' });
+        });
 
       setProgramParticipants(participants);
     } catch (err) {

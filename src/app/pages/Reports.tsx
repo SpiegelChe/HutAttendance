@@ -9,7 +9,7 @@ import {
   AttendanceRecord,
 } from "../../lib/supabase";
 import { PieChart, Pie, Cell, Tooltip } from "recharts";
-import { ADELAIDE_HILLS_TOWNSHIPS } from "../utils/constants";
+import { TOWNSHIP_NAMES } from "../utils/constants";
 import logo from "figma:asset/c717e59cf8f32fe25477e30d5de63135f3057cc8.png";
 import * as XLSX from "xlsx";
 
@@ -80,9 +80,18 @@ const ATSI_STATUS = ["Yes", "No"] as const;
 const CALD_BACKGROUND = ["Yes", "No"] as const;
 
 const COUNCILS = [
-  "Adelaide Hills Council",
-  "Other Council",
+  "Adelaide Hills",
+  "Mount Barker",
+  "Other Councils",
 ] as const;
+
+// Maps a raw council_region string to one of the three report buckets.
+const getCouncilBucket = (councilRegion: string | null | undefined): string => {
+  if (!councilRegion) return "Other Councils";
+  if (councilRegion.includes("Adelaide Hills")) return "Adelaide Hills";
+  if (councilRegion.includes("Mount Barker")) return "Mount Barker";
+  return "Other Councils";
+};
 
 interface FilterValues {
   startDate: string;
@@ -335,10 +344,7 @@ export default function Reports() {
             p.country_of_birth !== "Australia") ||
           p.speak_other_language === "Yes";
         cald.add(isCald ? "Yes" : "No");
-        const council =
-          p.council_region === "Adelaide Hills Council"
-            ? "Adelaide Hills Council"
-            : "Other Council";
+        const council = getCouncilBucket(p.council_region);
         couns.add(council);
         if (p.township) towns.add(p.township);
       });
@@ -394,10 +400,7 @@ export default function Reports() {
           (p.country_of_birth &&
             p.country_of_birth !== "Australia") ||
           p.speak_other_language === "Yes";
-        const council =
-          p.council_region === "Adelaide Hills Council"
-            ? "Adelaide Hills Council"
-            : "Other Council";
+        const council = getCouncilBucket(p.council_region);
 
         if (
           filters.ageGroup !== "all" &&
@@ -1175,7 +1178,7 @@ export default function Reports() {
                   }
                   className="h-[66px] w-full rounded-[20px] border border-[#d9d9d9] bg-white px-5 text-[0.98rem] text-[#152238] outline-none transition-all focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
                 >
-                  <option value="all">All councils</option>
+                  <option value="all">All Councils</option>
                   {COUNCILS.map((council) => (
                     <option
                       key={council}
@@ -1209,7 +1212,7 @@ export default function Reports() {
                   className="h-[66px] w-full rounded-[20px] border border-[#d9d9d9] bg-white px-5 text-[0.98rem] text-[#152238] outline-none transition-all focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
                 >
                   <option value="all">All townships</option>
-                  {ADELAIDE_HILLS_TOWNSHIPS.map((town) => (
+                  {TOWNSHIP_NAMES.filter(t => t !== 'Other').map((town) => (
                     <option
                       key={town}
                       value={town}
