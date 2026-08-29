@@ -129,14 +129,14 @@ export function GeneralInfoStep({ formData, handleChange }: GeneralInfoStepProps
 
           <div>
             <label className="block text-lg font-bold text-gray-700 mb-2">
-              Email <span className="text-red-600">*</span>
+              Email
             </label>
             <input
               type="email"
               value={formData.email}
               onChange={(e) => handleChange('email', e.target.value)}
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
-              placeholder="Enter email address"
+              placeholder="Enter email address (optional)"
             />
             {emailExists && <p className="text-red-500 text-sm">Email already exists. Please use a different email.</p>}
           </div>
@@ -848,7 +848,7 @@ interface ProgramSelectionStepProps {
 }
 
 export function ProgramSelectionStep({ selectedPrograms, onToggleProgram }: ProgramSelectionStepProps) {
-  const [programs, setPrograms] = useState<Array<{ id: string; name: string; description: string; color: string }>>([]);
+  const [programs, setPrograms] = useState<Array<{ id: string; name: string; description: string; category: string; color: string }>>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -864,12 +864,12 @@ export function ProgramSelectionStep({ selectedPrograms, onToggleProgram }: Prog
 
       if (error) throw error;
 
-      // Map database programs to our format with colors and categories
       const mappedPrograms = (data || []).map((prog) => ({
         id: prog.id,
         name: prog.name,
         description: prog.description || 'Program details',
-        color: 'blue' // Will be assigned based on category
+        category: prog.category || 'general',
+        color: 'blue'
       }));
 
       setPrograms(mappedPrograms);
@@ -880,27 +880,9 @@ export function ProgramSelectionStep({ selectedPrograms, onToggleProgram }: Prog
     }
   };
 
-  // Categorize programs
-  const childrenProgramNames = [
-    'Outdoor Playgroup',
-    'Homework Club',
-    'Dungeons & Dragons',
-    'Intergenerational Mentoring'
-  ];
-
-  const fitnessProgramNames = [
-    'Community Fun Fitness',
-    'Strength & Balance (Stirling)',
-    'Chi Kung',
-    'Walking Group',
-    "Men's Moves"
-  ];
-
-  const childrenPrograms = programs.filter(p => childrenProgramNames.includes(p.name));
-  const fitnessPrograms = programs.filter(p => fitnessProgramNames.includes(p.name));
-  const genericPrograms = programs.filter(p =>
-    !childrenProgramNames.includes(p.name) && !fitnessProgramNames.includes(p.name)
-  );
+  const childrenPrograms = programs.filter(p => p.category === 'children');
+  const fitnessPrograms = programs.filter(p => p.category === 'fitness');
+  const genericPrograms = programs.filter(p => !p.category || p.category === 'general');
 
   const colorClasses = {
     purple: { bg: 'bg-purple-50', border: 'border-purple-300', selected: 'border-purple-600 bg-purple-100' },
@@ -1025,7 +1007,7 @@ interface ProgramSpecificStepProps {
 }
 
 export function ProgramSpecificStep({ selectedPrograms, programData, onDataChange }: ProgramSpecificStepProps) {
-  const [programs, setPrograms] = useState<Array<{ id: string; name: string }>>([]);
+  const [programs, setPrograms] = useState<Array<{ id: string; name: string; category: string }>>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -1036,7 +1018,7 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
     try {
       const { data, error } = await supabase
         .from('programs')
-        .select('id, name')
+        .select('id, name, category')
         .in('id', selectedPrograms);
 
       if (error) throw error;
@@ -1048,32 +1030,8 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
     }
   };
 
-  // Define which programs require children-specific data
-  const childrenPrograms = [
-    'Outdoor Playgroup',
-    'Homework Club',
-    'Dungeons & Dragons',
-    'Intergenerational Mentoring'
-  ];
-
-  // Define which programs require fitness/health data
-  const fitnessPrograms = [
-    'Community Fun Fitness',
-    'Strength & Balance (Stirling)',
-    'Chi Kung',
-    'Walking Group',
-    "Men's Moves"
-  ];
-
-  // Check if any selected programs require children-specific data
-  const requiresChildrenData = programs.some(prog =>
-    childrenPrograms.includes(prog.name)
-  );
-
-  // Check if any selected programs require fitness/health data
-  const requiresFitnessData = programs.some(prog =>
-    fitnessPrograms.includes(prog.name)
-  );
+  const requiresChildrenData = programs.some(prog => prog.category === 'children');
+  const requiresFitnessData = programs.some(prog => prog.category === 'fitness');
 
   if (loading) {
     return (
@@ -1099,14 +1057,8 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
     );
   }
 
-  // Filter selected programs by type
-  const childrenProgramsSelected = programs.filter(prog =>
-    childrenPrograms.includes(prog.name)
-  );
-
-  const fitnessProgramsSelected = programs.filter(prog =>
-    fitnessPrograms.includes(prog.name)
-  );
+  const childrenProgramsSelected = programs.filter(prog => prog.category === 'children');
+  const fitnessProgramsSelected = programs.filter(prog => prog.category === 'fitness');
 
   return (
     <div className="space-y-8">
@@ -1559,38 +1511,6 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
                       </div>
                     </div>
 
-                    {/* Medication Information */}
-                    <div className={(data.healthConditions || []).includes('None') ? 'opacity-40 pointer-events-none' : ''}>
-                      <label className="block text-lg font-bold text-gray-700 mb-2">
-                        Are you taking any medications for any of these conditions?
-                      </label>
-                      <select
-                        value={data.takingMedications || ''}
-                        onChange={(e) => onDataChange('fitness', 'takingMedications', e.target.value)}
-                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
-                      >
-                        <option value="">Select an option</option>
-                        <option value="Yes">Yes</option>
-                        <option value="No">No</option>
-                      </select>
-                    </div>
-
-                    {/* Medication Effects - only show if taking medications */}
-                    {data.takingMedications === 'Yes' && (
-                      <div>
-                        <label className="block text-lg font-bold text-gray-700 mb-2">
-                          If yes, how does the medication effect you?
-                        </label>
-                        <textarea
-                          value={data.medicationEffects || ''}
-                          onChange={(e) => onDataChange('fitness', 'medicationEffects', e.target.value)}
-                          className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
-                          rows={3}
-                          placeholder="Please describe how the medication affects you"
-                        />
-                      </div>
-                    )}
-
                     {/* Exercise Level */}
                     <div>
                       <label className="block text-lg font-bold text-gray-700 mb-3">
@@ -1658,23 +1578,6 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
                           className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
                         />
                       </div>
-                    </div>
-
-                    {/* Medical Form Received */}
-                    <div>
-                      <label className="block text-lg font-bold text-gray-700 mb-2">
-                        Medical Form Received? (to be completed by a Medical Practitioner)
-                      </label>
-                      <select
-                        value={data.medicalFormReceived || ''}
-                        onChange={(e) => onDataChange('fitness', 'medicalFormReceived', e.target.value)}
-                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
-                      >
-                        <option value="">Select an option</option>
-                        <option value="Yes">Yes</option>
-                        <option value="No">No</option>
-                        <option value="N/A">N/A</option>
-                      </select>
                     </div>
 
                     {/* Free Form Notes */}

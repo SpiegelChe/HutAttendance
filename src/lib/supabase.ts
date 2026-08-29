@@ -54,6 +54,8 @@ export interface Program {
   start_time: string;
   end_time: string;
   capacity?: number;
+  // 'general' | 'children' | 'fitness' — drives which extra fields appear in registration
+  category?: string;
   created_at?: string;
 }
 

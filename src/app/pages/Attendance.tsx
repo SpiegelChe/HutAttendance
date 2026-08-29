@@ -245,21 +245,7 @@ export default function Attendance() {
 
   const selectedProgramName = programs.find(p => p.id === selectedProgram)?.name;
 
-  // Program category lists control which extra data sections appear in the
-  // participant detail popup — children's programs show child info (school,
-  // authorised pick-up persons, custody notes) while fitness programs show
-  // health declaration and medical condition details.
-  const CHILDREN_PROGRAMS = ['Outdoor Playgroup', 'Homework Club', 'Dungeons & Dragons', 'Intergenerational Mentoring'];
-  const FITNESS_PROGRAMS = ['Community Fun Fitness', 'Strength & Balance (Stirling)', 'Chi Kung', 'Walking Group', "Men's Moves"];
-
-  const getProgramCategory = (programName: string | undefined) => {
-    if (!programName) return 'general';
-    if (CHILDREN_PROGRAMS.includes(programName)) return 'children';
-    if (FITNESS_PROGRAMS.includes(programName)) return 'fitness';
-    return 'general';
-  };
-
-  const programCategory = getProgramCategory(selectedProgramName);
+  const programCategory = programs.find(p => p.id === selectedProgram)?.category || 'general';
 
   if (showSuccess) {
     return (

@@ -114,13 +114,15 @@ export default function EditParticipant() {
       if (fetchError) throw fetchError;
 
       if (data) {
-        // Parse date of birth
+        // Parse date of birth by splitting the ISO string directly — avoids
+        // timezone shifts that occur when Date() treats "YYYY-MM-DD" as UTC midnight,
+        // and preserves the zero-padded month that the MONTHS select values expect.
         let dobMonth = '', dobDay = '', dobYear = '';
         if (data.date_of_birth) {
-          const dob = new Date(data.date_of_birth);
-          dobMonth = String(dob.getMonth() + 1);
-          dobDay = String(dob.getDate());
-          dobYear = String(dob.getFullYear());
+          const parts = data.date_of_birth.split('T')[0].split('-');
+          dobYear  = parts[0];
+          dobMonth = parts[1];                        // '01'–'12', matches MONTHS values
+          dobDay   = String(parseInt(parts[2], 10));  // strip leading zero to match DAYS values
         }
 
         // Parse emergency contact name

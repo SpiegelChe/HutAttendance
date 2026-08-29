@@ -151,8 +151,8 @@ export default function AddParticipantMultiStep() {
         setError('First name and last name are required');
         return false;
       }
-      if (!formData.email || !formData.phone) {
-        setError('Email and phone number are required');
+      if (!formData.phone) {
+        setError('Phone number is required');
         return false;
       }
       if (!formData.gender) {
@@ -197,7 +197,7 @@ export default function AddParticipantMultiStep() {
       // Fetch program names to validate properly
       const { data: programsData, error: programsError } = await supabase
         .from('programs')
-        .select('id, name')
+        .select('id, name, category')
         .in('id', formData.selectedPrograms);
 
       if (programsError) {
@@ -206,32 +206,8 @@ export default function AddParticipantMultiStep() {
         return false;
       }
 
-      // Define which programs require children-specific data
-      const childrenProgramNames = [
-        'Outdoor Playgroup',
-        'Homework Club',
-        'Dungeons & Dragons',
-        'Intergenerational Mentoring'
-      ];
-
-      // Define which programs require fitness/health data
-      const fitnessProgramNames = [
-        'Community Fun Fitness',
-        'Strength & Balance (Stirling)',
-        'Chi Kung',
-        'Walking Group',
-        "Men's Moves"
-      ];
-
-      // Check if any selected programs are children's programs
-      const hasChildrenPrograms = (programsData || []).some(prog =>
-        childrenProgramNames.includes(prog.name)
-      );
-
-      // Check if any selected programs are fitness programs
-      const hasFitnessPrograms = (programsData || []).some(prog =>
-        fitnessProgramNames.includes(prog.name)
-      );
+      const hasChildrenPrograms = (programsData || []).some(prog => prog.category === 'children');
+      const hasFitnessPrograms = (programsData || []).some(prog => prog.category === 'fitness');
 
       // Validate children's category data if needed
       if (hasChildrenPrograms) {

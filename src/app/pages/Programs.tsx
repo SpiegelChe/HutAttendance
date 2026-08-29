@@ -13,6 +13,7 @@ interface Program {
   end_time: string;
   capacity: number;
   recurrence_type: string;
+  category: string; // 'general' | 'children' | 'fitness'
   event_date?: string; // DEPRECATED: kept for backward compatibility
   start_date?: string;
   week_of_month?: number;
@@ -90,6 +91,7 @@ export default function Programs() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    category: 'general',
     days: [] as string[],
     start_time: '',
     end_time: '',
@@ -279,6 +281,7 @@ export default function Programs() {
       const programData: any = {
         name: formData.name,
         description: formData.description,
+        category: formData.category,
         start_time: formData.start_time,
         end_time: formData.end_time,
         capacity: formData.capacity,
@@ -346,6 +349,7 @@ export default function Programs() {
       const programData: any = {
         name: formData.name,
         description: formData.description,
+        category: formData.category,
         start_time: formData.start_time,
         end_time: formData.end_time,
         capacity: formData.capacity,
@@ -460,6 +464,7 @@ export default function Programs() {
     const formDataUpdate: any = {
       name: program.name,
       description: program.description || '',
+      category: program.category || 'general',
       days: program.days || [],
       start_time: program.start_time,
       end_time: program.end_time,
@@ -508,6 +513,7 @@ export default function Programs() {
     setFormData({
       name: '',
       description: '',
+      category: 'general',
       days: [],
       start_time: '',
       end_time: '',
@@ -636,27 +642,9 @@ export default function Programs() {
           <div className="space-y-8">
             {/* Categorize programs */}
             {(() => {
-              const childrenProgramNames = [
-                'Outdoor Playgroup',
-                'Homework Club',
-                'Dungeons & Dragons',
-                'Intergenerational Mentoring'
-              ];
-
-              const fitnessProgramNames = [
-                'Community Fun Fitness',
-                'Strength & Balance (Stirling)',
-                'Chi Kung',
-                'Walking Group',
-                "Men's Moves"
-              ];
-
-              const childrenPrograms = programs.filter(p => childrenProgramNames.includes(p.name));
-              const fitnessPrograms = programs.filter(p => fitnessProgramNames.includes(p.name));
-              const categorizedNames = [...childrenProgramNames, ...fitnessProgramNames];
-              const genericPrograms = programs.filter(p =>
-                !categorizedNames.includes(p.name)
-              );
+              const childrenPrograms = programs.filter(p => p.category === 'children');
+              const fitnessPrograms = programs.filter(p => p.category === 'fitness');
+              const genericPrograms = programs.filter(p => !p.category || p.category === 'general');
 
               const renderProgramCard = (program: ProgramWithEnrollment) => {
                 const remaining = program.capacity - (program.enrollment_count || 0);
@@ -839,6 +827,21 @@ export default function Programs() {
                     rows={3}
                     placeholder="Enter program description"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-lg font-bold text-gray-700 mb-2">
+                    Category <span className="text-red-600">*</span>
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value="general">General</option>
+                    <option value="children">Children's</option>
+                    <option value="fitness">Fitness &amp; Wellbeing</option>
+                  </select>
                 </div>
 
                 <div>
@@ -1062,6 +1065,21 @@ export default function Programs() {
                     rows={3}
                     placeholder="Enter program description"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-lg font-bold text-gray-700 mb-2">
+                    Category <span className="text-red-600">*</span>
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value="general">General</option>
+                    <option value="children">Children's</option>
+                    <option value="fitness">Fitness &amp; Wellbeing</option>
+                  </select>
                 </div>
 
                 <div>
