@@ -412,6 +412,26 @@ BEGIN
     ALTER TABLE programs ALTER COLUMN days DROP NOT NULL;
     ALTER TABLE programs ALTER COLUMN days SET DEFAULT '{}';
   END IF;
+
+  -- Add category column so program type is stored in DB rather than inferred from name
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'programs' AND column_name = 'category'
+  ) THEN
+    ALTER TABLE programs ADD COLUMN category TEXT DEFAULT 'general'
+      CHECK (category IN ('children', 'fitness', 'general'));
+
+    -- Back-fill category for the default programs based on their known names
+    UPDATE programs SET category = 'children'
+      WHERE name IN ('Outdoor Playgroup', 'Homework Club', 'Dungeons & Dragons', 'Intergenerational Mentoring');
+
+    UPDATE programs SET category = 'fitness'
+      WHERE name IN ('Community Fun Fitness', 'Strength & Balance (Stirling)', 'Chi Kung', 'Walking Group', 'Men''s Moves');
+
+    -- All other existing programs default to 'general' (already set by DEFAULT above)
+
+    RAISE NOTICE 'Added category column and back-filled existing programs';
+  END IF;
 END $$;
 
 -- Create program_enrollments table (links participants to programs)
@@ -594,41 +614,68 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_attendance
 -- Add helpful comments
 COMMENT ON TABLE participants IS 'Stores participant information';
 
--- Program Specific Data Structure Documentation:
--- The program_specific_data JSONB column stores additional information required for specific program categories:
+-- program_specific_data JSONB structure:
 --
--- For Children's Programs (Outdoor Playgroup, Homework Club, D&D, Intergenerational Mentoring):
+-- Children's Programs:
 -- { "children": {
---     childGivenName, childFamilyName, childGender, childDOB, childAboriginalTSI,
---     childPhotoConsentWebsite, childPhotoConsentSocialMedia, childPhotoConsentAnnualReport,
---     childPhotoConsentBrochures, childPhotoConsentLocalMedia,
---     authorisedPerson1Name, authorisedPerson1Phone, authorisedPerson2Name, authorisedPerson2Phone,
---     custodyIssues, custodyIssuesDetails, ownWayHomePermission, ownWayHomeDetails,
---     schoolAttending, yearLevel
+--     childGivenName: string,          -- required
+--     childFamilyName: string,         -- required
+--     childGender: string,             -- required
+--     childDOB: date,                  -- required
+--     childAboriginalTSI: string,      -- required ("No" | "Yes")
+--     childPhotoConsentNone: boolean,  -- true = explicit refusal; mutually exclusive with individual consents below
+--     childPhotoConsentWebsite: boolean,
+--     childPhotoConsentSocialMedia: boolean,
+--     childPhotoConsentAnnualReport: boolean,
+--     childPhotoConsentBrochures: boolean,
+--     childPhotoConsentLocalMedia: boolean,
+--     authorisedPerson1Name: string,   -- required (name & relationship)
+--     authorisedPerson1Phone: string,  -- required
+--     authorisedPerson2Name: string,   -- optional
+--     authorisedPerson2Phone: string,  -- optional
+--     custodyIssues: string,           -- required ("No" | "Yes")
+--     custodyIssuesDetails: string,    -- required when custodyIssues = "Yes"
+--     ownWayHomePermission: string,    -- required ("No" | "Yes")
+--     ownWayHomeDetails: string,       -- optional context when "Yes"
+--     schoolAttending: string,         -- optional
+--     yearLevel: string,               -- optional
+--     freeFormNotes: string            -- optional additional notes
 --   }
 -- }
 --
--- For Fitness & Wellbeing Programs (Community Fun Fitness, Strength & Balance, Chi Kung, Walking Group, Men's Moves):
+-- Fitness & Wellbeing Programs:
 -- { "fitness": {
---     healthConditions: [],  -- Array of selected medical conditions, or ["None"] if participant has no conditions.
---                            -- Possible values: "None", "Breathing problems eg. Asthma, shortness of breath",
---                            -- "Back or joint problems including arthritis, joint replacements",
---                            -- "Recent fracture or heightened risk of fracture eg. Osteoporosis",
---                            -- "Repetitive strain injury", "Sight impairment", "Difficulty hearing",
---                            -- "High or low blood pressure", "Heart issues", "Diabetes", "Epilepsy",
---                            -- "Stroke", "Neurological condition eg. MS, Parkinsons Disease", "Hernia",
---                            -- "Recent medical procedure or surgery in the last 12 months?", "Other"
---     otherConditionDetails: string,  -- Free-text description when "Other" is selected in healthConditions
---     takingMedications: string,  -- "Yes" or "No" (skipped when healthConditions is ["None"])
---     regularExercise: string,  -- Exercise level
---     medicalProcedures: string,  -- Medical procedures in last 12 months
---     medicalTreatmentAcknowledged: boolean,  -- Required acknowledgement
---     medicalTreatmentAcknowledgedDate: date,
---     healthDeclarationSigned: boolean,  -- Required for fitness programs
---     healthDeclarationDate: date,
---     medicalFormReceived: string,  -- "Yes", "No", or "n/a"
---     medicalFormReceivedNotes: string  -- Optional notes
+--     healthConditions: string[],  -- required; ["None"] or one or more of:
+--                                  --   "Breathing problems eg. Asthma, shortness of breath"
+--                                  --   "Back or joint problems including arthritis, joint replacements"
+--                                  --   "Recent fracture or heightened risk of fracture eg. Osteoporosis"
+--                                  --   "Repetitive strain injury" | "Sight impairment" | "Difficulty hearing"
+--                                  --   "High or low blood pressure" | "Heart issues" | "Diabetes"
+--                                  --   "Epilepsy" | "Stroke"
+--                                  --   "Neurological condition eg. MS, Parkinsons Disease" | "Hernia"
+--                                  --   "Recent medical procedure or surgery in the last 12 months?" | "Other"
+--     otherConditionDetails: string,       -- free-text when "Other" is in healthConditions
+--     regularExercise: string,             -- required ("No reg exercise" | "Small amount of exercise" | "Reg.exercise")
+--     healthDeclarationSigned: boolean,    -- required
+--     healthDeclarationDate: date,         -- optional date accompanying the declaration
+--     freeFormNotes: string                -- optional additional notes
 --   }
+-- }
+--
+-- General Programs:
+-- { "general": {
+--     freeFormNotes: string  -- optional additional notes
+--   }
+-- }
+--
+-- photo_consent JSONB structure:
+-- {
+--   noneGiven: boolean,       -- true = participant explicitly declined all photo consent
+--   website: boolean,
+--   socialMedia: boolean,
+--   annualReport: boolean,
+--   brochures: boolean,
+--   localMedia: boolean
 -- }
 
 COMMENT ON COLUMN participants.gender IS 'Participant gender: Man, Woman, Non-binary, or Prefer not to say';

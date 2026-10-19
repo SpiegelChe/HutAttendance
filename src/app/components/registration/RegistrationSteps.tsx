@@ -765,15 +765,40 @@ export function GeneralInfoStep({ formData, handleChange }: GeneralInfoStepProps
         </p>
 
         <div className="space-y-4">
-          {/* Check All */}
-          <label className="flex items-center gap-3 cursor-pointer bg-pink-100 p-3 rounded-lg border-2 border-pink-300">
+          {/* I do not give permission */}
+          <label className="flex items-center gap-3 cursor-pointer bg-gray-100 p-3 rounded-lg border-2 border-gray-400">
             <input
               type="checkbox"
-              checked={formData.photoConsentWebsite && formData.photoConsentSocialMedia &&
+              checked={formData.photoConsentNone}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                handleChange('photoConsentNone', checked);
+                if (checked) {
+                  handleChange('photoConsentWebsite', false);
+                  handleChange('photoConsentSocialMedia', false);
+                  handleChange('photoConsentAnnualReport', false);
+                  handleChange('photoConsentBrochures', false);
+                  handleChange('photoConsentLocalMedia', false);
+                }
+              }}
+              className="w-6 h-6 rounded border-2 border-gray-400"
+            />
+            <span className="text-lg font-bold text-gray-800">
+              I do not give permission
+            </span>
+          </label>
+
+          {/* Check All */}
+          <label className={`flex items-center gap-3 bg-pink-100 p-3 rounded-lg border-2 border-pink-300 ${formData.photoConsentNone ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
+            <input
+              type="checkbox"
+              disabled={formData.photoConsentNone}
+              checked={!formData.photoConsentNone && formData.photoConsentWebsite && formData.photoConsentSocialMedia &&
                        formData.photoConsentAnnualReport && formData.photoConsentBrochures &&
                        formData.photoConsentLocalMedia}
               onChange={(e) => {
                 const checked = e.target.checked;
+                handleChange('photoConsentNone', false);
                 handleChange('photoConsentWebsite', checked);
                 handleChange('photoConsentSocialMedia', checked);
                 handleChange('photoConsentAnnualReport', checked);
@@ -787,55 +812,27 @@ export function GeneralInfoStep({ formData, handleChange }: GeneralInfoStepProps
             </span>
           </label>
 
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.photoConsentWebsite}
-              onChange={(e) => handleChange('photoConsentWebsite', e.target.checked)}
-              className="w-6 h-6 rounded border-2 border-gray-300"
-            />
-            <span className="text-lg font-semibold text-gray-700">Website</span>
-          </label>
-
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.photoConsentSocialMedia}
-              onChange={(e) => handleChange('photoConsentSocialMedia', e.target.checked)}
-              className="w-6 h-6 rounded border-2 border-gray-300"
-            />
-            <span className="text-lg font-semibold text-gray-700">Social Media</span>
-          </label>
-
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.photoConsentAnnualReport}
-              onChange={(e) => handleChange('photoConsentAnnualReport', e.target.checked)}
-              className="w-6 h-6 rounded border-2 border-gray-300"
-            />
-            <span className="text-lg font-semibold text-gray-700">Annual Report</span>
-          </label>
-
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.photoConsentBrochures}
-              onChange={(e) => handleChange('photoConsentBrochures', e.target.checked)}
-              className="w-6 h-6 rounded border-2 border-gray-300"
-            />
-            <span className="text-lg font-semibold text-gray-700">Brochures and Flyers</span>
-          </label>
-
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.photoConsentLocalMedia}
-              onChange={(e) => handleChange('photoConsentLocalMedia', e.target.checked)}
-              className="w-6 h-6 rounded border-2 border-gray-300"
-            />
-            <span className="text-lg font-semibold text-gray-700">Local Media</span>
-          </label>
+          {[
+            { field: 'photoConsentWebsite', label: 'Website' },
+            { field: 'photoConsentSocialMedia', label: 'Social Media' },
+            { field: 'photoConsentAnnualReport', label: 'Annual Report' },
+            { field: 'photoConsentBrochures', label: 'Brochures and Flyers' },
+            { field: 'photoConsentLocalMedia', label: 'Local Media' },
+          ].map(({ field, label }) => (
+            <label key={field} className={`flex items-center gap-3 ${formData.photoConsentNone ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
+              <input
+                type="checkbox"
+                disabled={formData.photoConsentNone}
+                checked={formData[field] || false}
+                onChange={(e) => {
+                  handleChange('photoConsentNone', false);
+                  handleChange(field, e.target.checked);
+                }}
+                className="w-6 h-6 rounded border-2 border-gray-300"
+              />
+              <span className="text-lg font-semibold text-gray-700">{label}</span>
+            </label>
+          ))}
         </div>
       </div>
     </div>
@@ -1032,6 +1029,7 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
 
   const requiresChildrenData = programs.some(prog => prog.category === 'children');
   const requiresFitnessData = programs.some(prog => prog.category === 'fitness');
+  const requiresGeneralData = programs.some(prog => !prog.category || prog.category === 'general');
 
   if (loading) {
     return (
@@ -1045,7 +1043,7 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
   }
 
   // If no programs require specific data, show completion message
-  if (!requiresChildrenData && !requiresFitnessData) {
+  if (!requiresChildrenData && !requiresFitnessData && !requiresGeneralData) {
     return (
       <div className="bg-green-50 p-8 rounded-xl border-4 border-green-200 text-center">
         <Check size={64} className="text-green-600 mx-auto mb-4" />
@@ -1059,6 +1057,7 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
 
   const childrenProgramsSelected = programs.filter(prog => prog.category === 'children');
   const fitnessProgramsSelected = programs.filter(prog => prog.category === 'fitness');
+  const generalProgramsSelected = programs.filter(prog => !prog.category || prog.category === 'general');
 
   return (
     <div className="space-y-8">
@@ -1167,15 +1166,38 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
                       </p>
 
                       <div className="space-y-3">
-                        {/* Check All */}
-                        <label className="flex items-center gap-3 cursor-pointer bg-pink-100 p-3 rounded-lg border-2 border-pink-300">
+                        {/* I do not give permission */}
+                        <label className="flex items-center gap-3 cursor-pointer bg-gray-100 p-3 rounded-lg border-2 border-gray-400">
                           <input
                             type="checkbox"
+                            checked={data.childPhotoConsentNone || false}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              onDataChange('children', 'childPhotoConsentNone', checked);
+                              if (checked) {
+                                onDataChange('children', 'childPhotoConsentWebsite', false);
+                                onDataChange('children', 'childPhotoConsentSocialMedia', false);
+                                onDataChange('children', 'childPhotoConsentAnnualReport', false);
+                                onDataChange('children', 'childPhotoConsentBrochures', false);
+                                onDataChange('children', 'childPhotoConsentLocalMedia', false);
+                              }
+                            }}
+                            className="w-6 h-6 rounded border-2 border-gray-400"
+                          />
+                          <span className="text-base font-bold text-gray-800">I do not give permission</span>
+                        </label>
+
+                        {/* Check All */}
+                        <label className={`flex items-center gap-3 bg-pink-100 p-3 rounded-lg border-2 border-pink-300 ${data.childPhotoConsentNone ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
+                          <input
+                            type="checkbox"
+                            disabled={data.childPhotoConsentNone || false}
                             checked={!!(data.childPhotoConsentWebsite && data.childPhotoConsentSocialMedia &&
                                      data.childPhotoConsentAnnualReport && data.childPhotoConsentBrochures &&
                                      data.childPhotoConsentLocalMedia)}
                             onChange={(e) => {
                               const checked = e.target.checked;
+                              onDataChange('children', 'childPhotoConsentNone', false);
                               onDataChange('children', 'childPhotoConsentWebsite', checked);
                               onDataChange('children', 'childPhotoConsentSocialMedia', checked);
                               onDataChange('children', 'childPhotoConsentAnnualReport', checked);
@@ -1187,55 +1209,27 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
                           <span className="text-base font-bold text-pink-900">Check All</span>
                         </label>
 
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={data.childPhotoConsentWebsite || false}
-                            onChange={(e) => onDataChange('children', 'childPhotoConsentWebsite', e.target.checked)}
-                            className="w-6 h-6 rounded border-2 border-gray-300"
-                          />
-                          <span className="text-base font-semibold text-gray-700">Website</span>
-                        </label>
-
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={data.childPhotoConsentSocialMedia || false}
-                            onChange={(e) => onDataChange('children', 'childPhotoConsentSocialMedia', e.target.checked)}
-                            className="w-6 h-6 rounded border-2 border-gray-300"
-                          />
-                          <span className="text-base font-semibold text-gray-700">Social Media</span>
-                        </label>
-
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={data.childPhotoConsentAnnualReport || false}
-                            onChange={(e) => onDataChange('children', 'childPhotoConsentAnnualReport', e.target.checked)}
-                            className="w-6 h-6 rounded border-2 border-gray-300"
-                          />
-                          <span className="text-base font-semibold text-gray-700">Annual Report</span>
-                        </label>
-
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={data.childPhotoConsentBrochures || false}
-                            onChange={(e) => onDataChange('children', 'childPhotoConsentBrochures', e.target.checked)}
-                            className="w-6 h-6 rounded border-2 border-gray-300"
-                          />
-                          <span className="text-base font-semibold text-gray-700">Brochures and Flyers</span>
-                        </label>
-
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={data.childPhotoConsentLocalMedia || false}
-                            onChange={(e) => onDataChange('children', 'childPhotoConsentLocalMedia', e.target.checked)}
-                            className="w-6 h-6 rounded border-2 border-gray-300"
-                          />
-                          <span className="text-base font-semibold text-gray-700">Local Media</span>
-                        </label>
+                        {[
+                          { field: 'childPhotoConsentWebsite', label: 'Website' },
+                          { field: 'childPhotoConsentSocialMedia', label: 'Social Media' },
+                          { field: 'childPhotoConsentAnnualReport', label: 'Annual Report' },
+                          { field: 'childPhotoConsentBrochures', label: 'Brochures and Flyers' },
+                          { field: 'childPhotoConsentLocalMedia', label: 'Local Media' },
+                        ].map(({ field, label }) => (
+                          <label key={field} className={`flex items-center gap-3 ${data.childPhotoConsentNone ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
+                            <input
+                              type="checkbox"
+                              disabled={data.childPhotoConsentNone || false}
+                              checked={data[field] || false}
+                              onChange={(e) => {
+                                onDataChange('children', 'childPhotoConsentNone', false);
+                                onDataChange('children', field, e.target.checked);
+                              }}
+                              className="w-6 h-6 rounded border-2 border-gray-300"
+                            />
+                            <span className="text-base font-semibold text-gray-700">{label}</span>
+                          </label>
+                        ))}
                       </div>
                     </div>
 
@@ -1368,27 +1362,27 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-lg font-bold text-gray-700 mb-2">
-                          School Attending <span className="text-red-600">*</span>
+                          School Attending
                         </label>
                         <input
                           type="text"
                           value={data.schoolAttending || ''}
                           onChange={(e) => onDataChange('children', 'schoolAttending', e.target.value)}
                           className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
-                          placeholder="School name"
+                          placeholder="School name (optional)"
                         />
                       </div>
 
                       <div>
                         <label className="block text-lg font-bold text-gray-700 mb-2">
-                          Year Level <span className="text-red-600">*</span>
+                          Year Level
                         </label>
                         <select
                           value={data.yearLevel || ''}
                           onChange={(e) => onDataChange('children', 'yearLevel', e.target.value)}
                           className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
                         >
-                          <option value="">Select year level</option>
+                          <option value="">Select year level (optional)</option>
                           <option value="Reception">Reception</option>
                           <option value="Year 1">Year 1</option>
                           <option value="Year 2">Year 2</option>
@@ -1404,6 +1398,20 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
                           <option value="Year 12">Year 12</option>
                         </select>
                       </div>
+                    </div>
+
+                    {/* Additional Notes */}
+                    <div>
+                      <label className="block text-lg font-bold text-gray-700 mb-2">
+                        Additional Notes
+                      </label>
+                      <textarea
+                        value={data.freeFormNotes || ''}
+                        onChange={(e) => onDataChange('children', 'freeFormNotes', e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
+                        rows={4}
+                        placeholder="Any additional information or notes"
+                      />
                     </div>
                   </>
                 );
@@ -1596,6 +1604,33 @@ export function ProgramSpecificStep({ selectedPrograms, programData, onDataChang
                   </>
                 );
               })()}
+            </div>
+          </div>
+        </>
+      )}
+
+      {generalProgramsSelected.length > 0 && (
+        <>
+          <div className="bg-green-50 p-4 rounded-xl border-2 border-green-200">
+            <p className="text-lg font-semibold text-green-900">
+              General programs selected: {generalProgramsSelected.map(p => p.name).join(', ')}
+            </p>
+          </div>
+
+          <div className="bg-green-50 p-6 rounded-xl border-2 border-green-200">
+            <h4 className="text-xl font-bold text-green-900 mb-2">General Programs - Additional Information</h4>
+            <p className="text-sm text-green-700 mb-4">This information is optional and will apply to all selected general programs.</p>
+            <div>
+              <label className="block text-lg font-bold text-gray-700 mb-2">
+                Additional Notes
+              </label>
+              <textarea
+                value={(programData['general'] || {}).freeFormNotes || ''}
+                onChange={(e) => onDataChange('general', 'freeFormNotes', e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-blue-500 focus:outline-none"
+                rows={4}
+                placeholder="Any additional information or notes (optional)"
+              />
             </div>
           </div>
         </>

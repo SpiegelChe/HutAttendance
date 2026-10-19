@@ -94,6 +94,7 @@ export default function AddParticipantMultiStep() {
     referralOther: '',
     
     // Photo Consent
+    photoConsentNone: false,
     photoConsentWebsite: false,
     photoConsentSocialMedia: false,
     photoConsentAnnualReport: false,
@@ -252,14 +253,6 @@ export default function AddParticipantMultiStep() {
           setError('Please indicate permission for child to make own way home');
           return false;
         }
-        if (!data.schoolAttending) {
-          setError('Please enter the school the child is attending');
-          return false;
-        }
-        if (!data.yearLevel) {
-          setError('Please select the child\'s year level');
-          return false;
-        }
       }
 
       // Validate fitness category data if needed
@@ -360,6 +353,7 @@ export default function AddParticipantMultiStep() {
       
       // Build photo consent object
       const photoConsent = {
+        noneGiven: formData.photoConsentNone,
         website: formData.photoConsentWebsite,
         socialMedia: formData.photoConsentSocialMedia,
         annualReport: formData.photoConsentAnnualReport,
